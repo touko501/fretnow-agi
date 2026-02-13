@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>FRETNOW | Composants Intelligents</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <style>
+    * { font-family: 'Inter', system-ui, sans-serif; }
+    body { background: #0a0a0f; color: #fff; min-height: 100vh; }
+    .glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); }
+    .gradient-animate { background: linear-gradient(-45deg, #667eea, #764ba2, #00d4ff, #667eea); background-size: 400% 400%; animation: gradient 8s ease infinite; }
+    @keyframes gradient { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useRef } = React;
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 📍 AUTOCOMPLETE ADRESSE (API Adresse gouv.fr - GRATUIT)
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    const AddressAutocomplete = ({ onSelect, placeholder = "Tapez une adresse..." }) => {
+      const [query, setQuery] = useState('');
+      const [suggestions, setSuggestions] = useState([]);
+      const [isLoading, setIsLoading] = useState(false);
+      const [showSuggestions, setShowSuggestions] = useState(false);
+      const [selectedIndex, setSelectedIndex] = useState(-1);
+      const debounceRef = useRef(null);
+
+      const searchAddress = async (q) => {
+        if (q.length < 3) { setSuggestions([]); return; }
+        setIsLoading(true);
+        try {
+          const response = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=5`);
+          const data = await response.json();
+          setSuggestions(data.features?.map(f => ({
+            label: f.properties.label,
+            street: f.properties.name,
+            city: f.properties.city,
+            postcode: f.properties.postcode,
+            context: f.properties.context,
+            lat: f.geometry.coordinates[1],
+            lng: f.geometry.coordinates[0]
+          })) || []);
+        } catch (e) { setSuggestions([]); }
+        setIsLoading(false);
+      };
+
+      const handleChange = (e) => {
+        const val = e.target.value;
+        setQuery(val);
+        setSelectedIndex(-1);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => searchAddress(val), 300);
+      };
+
+      const handleSelect = (s) => {
+        setQuery(s.label);
+        setSuggestions([]);
+        setShowSuggestions(false);
+        onSelect?.(s);
+      };
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex(i => Math.min(i + 1, suggestions.length - 1)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex(i => Math.max(i - 1, 0)); }
+        else if (e.key === 'Enter' && selectedIndex >= 0) { e.preventDefault(); handleSelect(suggestions[selectedIndex]); }
+        else if (e.key === 'Escape') { setShowSuggestions(false); }
+      };
+
+      return (
+        <div className="relative">
+          <input type="text" value={query} onChange={handleChange}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            className="w-full bg-white/5 border border-gray-700 rounded-xl px-4 py-3 pr-10 transition focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+            autoComplete="off"
+          />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            {isLoading ? (
+              <svg className="w-5 h-5 text-cyan-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            ) : <span className="text-gray-400">📍</span>}
+          </div>
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-gray-900/95 backdrop-blur border border-gray-700 rounded-xl shadow-2xl overflow-hidden">
+              {suggestions.map((s, i) => (
+                <button key={i} type="button" onClick={() => handleSelect(s)}
+                  className={`w-full px-4 py-3 text-left transition flex items-start gap-3 ${i === selectedIndex ? 'bg-cyan-500/30' : 'hover:bg-cyan-500/20'}`}>
+                  <span className="text-cyan-400 mt-0.5">📍</span>
+                  <div>
+                    <p className="font-medium text-sm text-white">{s.street}</p>
+                    <p className="text-xs text-gray-400">{s.postcode} {s.city} • {s.context}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 🏢 SIRET VERIFIER (API SIRENE entreprise.data.gouv.fr - GRATUIT)
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    const SiretVerifier = ({ onVerified }) => {
+      const [siret, setSiret] = useState('');
+      const [status, setStatus] = useState('idle');
+      const [company, setCompany] = useState(null);
+      const debounceRef = useRef(null);
+
+      const formatSiret = (val) => {
+        const clean = val.replace(/\D/g, '').slice(0, 14);
+        const parts = [];
+        if (clean.length > 0) parts.push(clean.slice(0, 3));
+        if (clean.length > 3) parts.push(clean.slice(3, 6));
+        if (clean.length > 6) parts.push(clean.slice(6, 9));
+        if (clean.length > 9) parts.push(clean.slice(9, 14));
+        return parts.join(' ');
+      };
+
+      const verifySiret = async (cleanSiret) => {
+        if (cleanSiret.length !== 14) { setStatus('idle'); setCompany(null); return; }
+        setStatus('loading');
+        try {
+          const response = await fetch(`https://entreprise.data.gouv.fr/api/sirene/v3/etablissements/${cleanSiret}`);
+          if (response.ok) {
+            const data = await response.json();
+            const e = data.etablissement;
+            const companyData = {
+              siret: e.siret,
+              siren: e.siren,
+              name: e.unite_legale?.denomination || e.denomination_usuelle || 'Non renseigné',
+              address: `${e.numero_voie || ''} ${e.type_voie || ''} ${e.libelle_voie || ''}`.trim(),
+              city: e.libelle_commune,
+              postalCode: e.code_postal,
+              activity: e.libelle_activite_principale,
+              activityCode: e.activite_principale,
+              legalForm: e.unite_legale?.categorie_juridique,
+              creationDate: e.date_creation,
+              active: e.etat_administratif === 'A',
+              employees: e.tranche_effectifs
+            };
+            setCompany(companyData);
+            setStatus(companyData.active ? 'valid' : 'inactive');
+            onVerified?.(companyData);
+          } else if (response.status === 404) {
+            setStatus('invalid');
+            setCompany(null);
+            onVerified?.(null);
+          } else {
+            setStatus('error');
+          }
+        } catch (e) { setStatus('error'); }
+      };
+
+      const handleChange = (e) => {
+        const formatted = formatSiret(e.target.value);
+        const clean = formatted.replace(/\s/g, '');
+        setSiret(formatted);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => verifySiret(clean), 500);
+      };
+
+      const borderColor = status === 'valid' ? 'border-green-500 focus:border-green-500' : 
+                          status === 'invalid' ? 'border-red-500 focus:border-red-500' : 
+                          status === 'inactive' ? 'border-orange-500' : 'border-gray-700 focus:border-cyan-500';
+
+      return (
+        <div>
+          <div className="relative">
+            <input type="text" value={siret} onChange={handleChange}
+              placeholder="XXX XXX XXX XXXXX"
+              className={`w-full bg-white/5 border ${borderColor} rounded-xl px-4 py-3 pr-10 transition focus:outline-none focus:ring-2 focus:ring-cyan-500/20`}
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-lg">
+              {status === 'loading' && <span className="text-cyan-400 animate-pulse">⏳</span>}
+              {status === 'valid' && <span className="text-green-400">✓</span>}
+              {status === 'invalid' && <span className="text-red-400">✕</span>}
+              {status === 'inactive' && <span className="text-orange-400">⚠</span>}
+              {status === 'error' && <span className="text-yellow-400">!</span>}
+              {status === 'idle' && <span className="text-gray-400">🏢</span>}
+            </div>
+          </div>
+          
+          {company && status === 'valid' && (
+            <div className="mt-3 p-4 bg-green-500/10 border border-green-500/30 rounded-xl animate-fadeIn">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🏢</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-green-400">{company.name}</p>
+                  <p className="text-sm text-gray-300">{company.address}</p>
+                  <p className="text-sm text-gray-400">{company.postalCode} {company.city}</p>
+                  <p className="text-xs text-gray-500 mt-1">📋 {company.activity}</p>
+                  {company.creationDate && (
+                    <p className="text-xs text-gray-500">📅 Créée le {new Date(company.creationDate).toLocaleDateString('fr-FR')}</p>
+                  )}
+                </div>
+                <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-lg">✓ Actif</span>
+              </div>
+            </div>
+          )}
+          
+          {company && status === 'inactive' && (
+            <div className="mt-3 p-3 bg-orange-500/10 border border-orange-500/30 rounded-xl animate-fadeIn">
+              <p className="text-sm text-orange-400">⚠️ Cet établissement ({company.name}) n'est plus actif</p>
+            </div>
+          )}
+          
+          {status === 'invalid' && (
+            <p className="mt-2 text-sm text-red-400 animate-fadeIn">❌ Ce SIRET n'existe pas dans la base SIRENE</p>
+          )}
+          
+          {status === 'error' && (
+            <p className="mt-2 text-sm text-yellow-400 animate-fadeIn">⚠️ Impossible de vérifier le SIRET pour le moment</p>
+          )}
+        </div>
+      );
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 🏭 RECHERCHE ENTREPRISE TRANSPORT
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    const CompanySearch = ({ onSelect }) => {
+      const [query, setQuery] = useState('');
+      const [results, setResults] = useState([]);
+      const [isLoading, setIsLoading] = useState(false);
+      const [showResults, setShowResults] = useState(false);
+      const debounceRef = useRef(null);
+
+      const searchCompanies = async (q) => {
+        if (q.length < 2) { setResults([]); return; }
+        setIsLoading(true);
+        try {
+          // Filtre sur les codes NAF transport
+          const url = `https://entreprise.data.gouv.fr/api/sirene/v3/etablissements?q=${encodeURIComponent(q)}&per_page=6&activite_principale=49.41A,49.41B,49.41C,52.29A,52.29B`;
+          const response = await fetch(url);
+          const data = await response.json();
+          setResults(data.etablissements?.filter(e => e.etat_administratif === 'A').map(e => ({
+            siret: e.siret,
+            siren: e.siren,
+            name: e.unite_legale?.denomination || e.denomination_usuelle || 'Non renseigné',
+            city: e.libelle_commune,
+            postalCode: e.code_postal,
+            activity: e.libelle_activite_principale
+          })) || []);
+        } catch (e) { setResults([]); }
+        setIsLoading(false);
+      };
+
+      const handleChange = (e) => {
+        const val = e.target.value;
+        setQuery(val);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => searchCompanies(val), 400);
+      };
+
+      const handleSelect = (company) => {
+        setQuery(company.name);
+        onSelect?.(company);
+        setShowResults(false);
+      };
+
+      return (
+        <div className="relative">
+          <input type="text" value={query} onChange={handleChange}
+            onFocus={() => setShowResults(true)}
+            onBlur={() => setTimeout(() => setShowResults(false), 200)}
+            placeholder="Rechercher une entreprise de transport..."
+            className="w-full bg-white/5 border border-gray-700 rounded-xl px-4 py-3 pr-10 transition focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+          />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            {isLoading ? (
+              <svg className="w-5 h-5 text-cyan-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            ) : <span className="text-gray-400">🔍</span>}
+          </div>
+          {showResults && results.length > 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-gray-900/95 backdrop-blur border border-gray-700 rounded-xl shadow-2xl overflow-hidden max-h-72 overflow-y-auto">
+              {results.map((c, i) => (
+                <button key={i} type="button" onClick={() => handleSelect(c)}
+                  className="w-full px-4 py-3 text-left hover:bg-cyan-500/20 transition flex items-start gap-3 border-b border-gray-800 last:border-0">
+                  <span className="text-xl mt-0.5">🚛</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-white truncate">{c.name}</p>
+                    <p className="text-xs text-gray-400">{c.postalCode} {c.city}</p>
+                    <p className="text-xs text-gray-500 truncate">{c.activity}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 📱 DEMO APP
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    const DemoApp = () => {
+      const [selectedAddress, setSelectedAddress] = useState(null);
+      const [selectedCompany, setSelectedCompany] = useState(null);
+      const [verifiedCompany, setVerifiedCompany] = useState(null);
+
+      return (
+        <div className="min-h-screen p-4 md:p-8">
+          <div className="max-w-2xl mx-auto">
+            {/* Header */}
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-2 glass px-4 py-2 rounded-full mb-4">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span className="text-sm">APIs Gratuites</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-bold mb-2">
+                🔍 Composants <span className="bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">Intelligents</span>
+              </h1>
+              <p className="text-gray-400">Autocomplétion adresse + Vérification SIRET + Recherche entreprises</p>
+            </div>
+
+            <div className="space-y-8">
+              {/* Adresse Autocomplete */}
+              <div className="glass rounded-2xl p-6">
+                <h2 className="font-bold text-lg mb-1 flex items-center gap-2">
+                  <span>📍</span> Autocomplétion Adresse
+                </h2>
+                <p className="text-sm text-gray-400 mb-4">API Adresse (data.gouv.fr) - Suggestions en temps réel</p>
+                
+                <AddressAutocomplete 
+                  placeholder="Ex: 45 rue de la République, Lyon"
+                  onSelect={setSelectedAddress}
+                />
+                
+                {selectedAddress && (
+                  <div className="mt-4 p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-xl animate-fadeIn">
+                    <p className="text-sm text-cyan-400 font-medium">📍 Adresse sélectionnée:</p>
+                    <p className="text-white">{selectedAddress.label}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Coordonnées: {selectedAddress.lat.toFixed(6)}, {selectedAddress.lng.toFixed(6)}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* SIRET Verifier */}
+              <div className="glass rounded-2xl p-6">
+                <h2 className="font-bold text-lg mb-1 flex items-center gap-2">
+                  <span>🏢</span> Vérification SIRET
+                </h2>
+                <p className="text-sm text-gray-400 mb-4">API SIRENE (entreprise.data.gouv.fr) - Données officielles INSEE</p>
+                
+                <SiretVerifier onVerified={setVerifiedCompany} />
+                
+                <div className="mt-4 p-3 bg-gray-800/50 rounded-xl">
+                  <p className="text-xs text-gray-500">💡 Essayez: 443 061 841 00015 (Google France)</p>
+                </div>
+              </div>
+
+              {/* Company Search */}
+              <div className="glass rounded-2xl p-6">
+                <h2 className="font-bold text-lg mb-1 flex items-center gap-2">
+                  <span>🚛</span> Recherche Transporteurs
+                </h2>
+                <p className="text-sm text-gray-400 mb-4">Recherche filtrée sur les entreprises de transport (codes NAF)</p>
+                
+                <CompanySearch onSelect={setSelectedCompany} />
+                
+                {selectedCompany && (
+                  <div className="mt-4 p-3 bg-purple-500/10 border border-purple-500/30 rounded-xl animate-fadeIn">
+                    <p className="text-sm text-purple-400 font-medium">🚛 Entreprise sélectionnée:</p>
+                    <p className="text-white font-semibold">{selectedCompany.name}</p>
+                    <p className="text-sm text-gray-400">{selectedCompany.postalCode} {selectedCompany.city}</p>
+                    <p className="text-xs text-gray-500 mt-1">SIRET: {selectedCompany.siret}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* APIs Info */}
+              <div className="glass rounded-2xl p-6">
+                <h2 className="font-bold text-lg mb-4">🔌 APIs Utilisées (Gratuites)</h2>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <span className="text-green-400">✓</span>
+                    <div>
+                      <p className="font-medium">API Adresse</p>
+                      <p className="text-xs text-gray-400">api-adresse.data.gouv.fr - Géocodage français</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-green-400">✓</span>
+                    <div>
+                      <p className="font-medium">API SIRENE</p>
+                      <p className="text-xs text-gray-400">entreprise.data.gouv.fr - Base officielle des entreprises</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-green-400">✓</span>
+                    <div>
+                      <p className="font-medium">Open-Meteo</p>
+                      <p className="text-xs text-gray-400">Météo temps réel pour les conditions de transport</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-green-400">✓</span>
+                    <div>
+                      <p className="font-medium">Prix Carburant</p>
+                      <p className="text-xs text-gray-400">data.economie.gouv.fr - Prix diesel en France</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="text-center mt-10 text-sm text-gray-500">
+              FRETNOW AGI 2.0 — Composants intelligents gratuits
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<DemoApp />);
+  </script>
+</body>
+</html>

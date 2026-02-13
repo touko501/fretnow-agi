@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>FRETNOW 2.0 | Dashboard</title>
+  <link rel="manifest" href="manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { font-family: 'Inter', system-ui, sans-serif; }
+    body { 
+      background: #0a0a0f; 
+      color: #fff;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+    
+    /* Glassmorphism */
+    .glass {
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    /* Gradient animations */
+    @keyframes gradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    .gradient-animate {
+      background: linear-gradient(-45deg, #667eea, #764ba2, #00d4ff, #667eea);
+      background-size: 400% 400%;
+      animation: gradient 15s ease infinite;
+    }
+    
+    /* Pulse animation */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.8); opacity: 1; }
+      100% { transform: scale(1.3); opacity: 0; }
+    }
+    
+    .pulse-ring::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: inherit;
+      background: inherit;
+      animation: pulse-ring 2s ease-out infinite;
+      z-index: -1;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+    
+    /* Mobile optimization */
+    @media (max-width: 768px) {
+      .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 🎨 COMPOSANTS UI
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    // Carte statistique avec animation
+    const StatCard = ({ icon, title, value, subtitle, trend, color = 'cyan' }) => {
+      const colors = {
+        cyan: 'from-cyan-500 to-blue-500',
+        purple: 'from-purple-500 to-pink-500',
+        green: 'from-green-500 to-emerald-500',
+        orange: 'from-orange-500 to-red-500'
+      };
+      
+      return (
+        <div className="glass rounded-2xl p-5 hover:scale-[1.02] transition-all duration-300">
+          <div className="flex items-start justify-between">
+            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colors[color]} flex items-center justify-center text-2xl`}>
+              {icon}
+            </div>
+            {trend && (
+              <span className={`text-sm font-medium ${trend > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}%
+              </span>
+            )}
+          </div>
+          <div className="mt-4">
+            <p className="text-3xl font-bold">{value}</p>
+            <p className="text-sm text-gray-400 mt-1">{title}</p>
+            {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+          </div>
+        </div>
+      );
+    };
+    
+    // Barre de progression circulaire
+    const CircularProgress = ({ value, max, label, color = '#667eea' }) => {
+      const percentage = (value / max) * 100;
+      const circumference = 2 * Math.PI * 45;
+      const strokeDashoffset = circumference - (percentage / 100) * circumference;
+      
+      return (
+        <div className="relative w-32 h-32">
+          <svg className="w-full h-full transform -rotate-90">
+            <circle cx="64" cy="64" r="45" stroke="rgba(255,255,255,0.1)" strokeWidth="8" fill="none" />
+            <circle 
+              cx="64" cy="64" r="45" 
+              stroke={color} 
+              strokeWidth="8" 
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-bold">{value}</span>
+            <span className="text-xs text-gray-400">{label}</span>
+          </div>
+        </div>
+      );
+    };
+    
+    // Liste de leads avec scroll infini
+    const LeadsList = ({ leads, onSelect }) => (
+      <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+        {leads.map((lead, i) => (
+          <div 
+            key={lead.id || i}
+            onClick={() => onSelect?.(lead)}
+            className="glass rounded-xl p-4 hover:bg-white/5 cursor-pointer transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold
+                  ${lead.score >= 80 ? 'bg-green-500/20 text-green-400' :
+                    lead.score >= 60 ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-red-500/20 text-red-400'}`}>
+                  {lead.score || '?'}
+                </div>
+                <div>
+                  <p className="font-medium">{lead.company?.name || 'Entreprise'}</p>
+                  <p className="text-sm text-gray-400">{lead.contact?.city || 'Ville'}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-400">{lead.fleet?.vehicles || 0} véhicules</p>
+                <p className={`text-xs px-2 py-0.5 rounded-full mt-1
+                  ${lead.status === 'qualified' ? 'bg-green-500/20 text-green-400' :
+                    lead.status === 'contacted' ? 'bg-blue-500/20 text-blue-400' :
+                    'bg-gray-500/20 text-gray-400'}`}>
+                  {lead.status || 'new'}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+        {leads.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            <p className="text-4xl mb-2">🔍</p>
+            <p>Aucun lead pour le moment</p>
+          </div>
+        )}
+      </div>
+    );
+    
+    // Agent status indicator
+    const AgentStatus = ({ name, icon, stats, priority }) => {
+      const isActive = stats?.runs > 0;
+      
+      return (
+        <div className="glass rounded-xl p-4 flex items-center gap-4">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl relative
+            ${isActive ? 'bg-green-500/20' : 'bg-gray-500/20'}`}>
+            {icon}
+            {isActive && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+            )}
+          </div>
+          <div className="flex-1">
+            <p className="font-medium">{name}</p>
+            <p className="text-sm text-gray-400">
+              {stats?.runs || 0} exécutions | Priorité: {priority}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-medium text-green-400">
+              {Math.round((stats?.successRate || 1) * 100)}%
+            </p>
+            <p className="text-xs text-gray-500">succès</p>
+          </div>
+        </div>
+      );
+    };
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 📱 APPLICATION PRINCIPALE
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    const App = () => {
+      const [view, setView] = useState('dashboard');
+      const [data, setData] = useState({
+        metrics: null,
+        state: null,
+        leads: [],
+        agents: null
+      });
+      const [loading, setLoading] = useState(true);
+      const [lastUpdate, setLastUpdate] = useState(null);
+      
+      // Fetch data
+      const fetchData = useCallback(async () => {
+        try {
+          const API = 'http://localhost:3001/api';
+          
+          const [metrics, state, leads, agents] = await Promise.all([
+            fetch(`${API}/metrics`).then(r => r.json()).catch(() => null),
+            fetch(`${API}/state`).then(r => r.json()).catch(() => null),
+            fetch(`${API}/leads?limit=20`).then(r => r.json()).catch(() => ({ leads: [] })),
+            fetch(`${API}/agents`).then(r => r.json()).catch(() => null)
+          ]);
+          
+          setData({ metrics, state, leads: leads.leads || [], agents });
+          setLastUpdate(new Date());
+          setLoading(false);
+        } catch (error) {
+          console.error('Fetch error:', error);
+          setLoading(false);
+        }
+      }, []);
+      
+      useEffect(() => {
+        fetchData();
+        const interval = setInterval(fetchData, 5000);
+        return () => clearInterval(interval);
+      }, [fetchData]);
+      
+      // Demo data for preview
+      const demoData = {
+        leads: data.leads.length > 0 ? data.leads : [
+          { id: 1, company: { name: 'Transport Express Lyon' }, contact: { city: 'Lyon' }, fleet: { vehicles: 12 }, score: 87, status: 'qualified' },
+          { id: 2, company: { name: 'Fret Rapide Paris' }, contact: { city: 'Paris' }, fleet: { vehicles: 8 }, score: 74, status: 'contacted' },
+          { id: 3, company: { name: 'LogiSud Marseille' }, contact: { city: 'Marseille' }, fleet: { vehicles: 5 }, score: 62, status: 'new' }
+        ],
+        metrics: data.metrics || { totalCycles: 0, agentExecutions: {} },
+        state: data.state || { leads: 0, missions: 0, matches: 0 }
+      };
+      
+      return (
+        <div className="min-h-screen">
+          {/* Header */}
+          <header className="glass sticky top-0 z-50 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl gradient-animate flex items-center justify-center font-bold text-lg">
+                F
+              </div>
+              <div>
+                <h1 className="font-bold">FRETNOW</h1>
+                <p className="text-xs text-gray-400">AGI 2.0</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-medium">
+                  {data.metrics?.totalCycles || 0} cycles
+                </p>
+                <p className="text-xs text-gray-400">
+                  {lastUpdate?.toLocaleTimeString() || '--:--'}
+                </p>
+              </div>
+              <div className={`w-3 h-3 rounded-full ${loading ? 'bg-yellow-500' : 'bg-green-500'} animate-pulse`} />
+            </div>
+          </header>
+          
+          {/* Main Content */}
+          <main className="p-4 pb-24 max-w-7xl mx-auto">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <StatCard 
+                icon="🎯" 
+                title="Leads actifs" 
+                value={demoData.state.leads || demoData.leads.length}
+                subtitle="Transporteurs qualifiés"
+                trend={12}
+                color="cyan"
+              />
+              <StatCard 
+                icon="🚛" 
+                title="Missions" 
+                value={demoData.state.missions || 0}
+                subtitle="En attente de matching"
+                color="purple"
+              />
+              <StatCard 
+                icon="🤝" 
+                title="Matchs" 
+                value={demoData.state.matches || 0}
+                subtitle="Créés aujourd'hui"
+                trend={8}
+                color="green"
+              />
+              <StatCard 
+                icon="💰" 
+                title="Revenue" 
+                value="0€"
+                subtitle="Commissions J+1"
+                color="orange"
+              />
+            </div>
+            
+            {/* Two Column Layout */}
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* Left Column - Leads */}
+              <div className="lg:col-span-2 glass rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold">🔍 Leads récents</h2>
+                  <button className="text-sm text-cyan-400 hover:text-cyan-300">
+                    Voir tout →
+                  </button>
+                </div>
+                <LeadsList leads={demoData.leads} />
+              </div>
+              
+              {/* Right Column - Agents */}
+              <div className="space-y-4">
+                <div className="glass rounded-2xl p-5">
+                  <h2 className="text-lg font-semibold mb-4">🤖 Agents</h2>
+                  <div className="space-y-3">
+                    <AgentStatus 
+                      name="MATCHER" 
+                      icon="🎯" 
+                      stats={data.agents?.MATCHER?.stats}
+                      priority={95}
+                    />
+                    <AgentStatus 
+                      name="SCOUT" 
+                      icon="🔍" 
+                      stats={data.agents?.SCOUT?.stats}
+                      priority={90}
+                    />
+                    <AgentStatus 
+                      name="COMMS" 
+                      icon="💬" 
+                      stats={data.agents?.COMMS?.stats}
+                      priority={85}
+                    />
+                    <AgentStatus 
+                      name="PRICING" 
+                      icon="💰" 
+                      stats={data.agents?.PRICING?.stats}
+                      priority={80}
+                    />
+                  </div>
+                </div>
+                
+                {/* Quick Actions */}
+                <div className="glass rounded-2xl p-5">
+                  <h2 className="text-lg font-semibold mb-4">⚡ Actions rapides</h2>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button className="bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl p-3 text-sm font-medium hover:opacity-90 transition-opacity">
+                      + Mission
+                    </button>
+                    <button className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-3 text-sm font-medium hover:opacity-90 transition-opacity">
+                      Devis
+                    </button>
+                    <button className="bg-white/10 rounded-xl p-3 text-sm font-medium hover:bg-white/20 transition-colors">
+                      Export
+                    </button>
+                    <button className="bg-white/10 rounded-xl p-3 text-sm font-medium hover:bg-white/20 transition-colors">
+                      Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Market Conditions */}
+            <div className="glass rounded-2xl p-5 mt-6">
+              <h2 className="text-lg font-semibold mb-4">📊 Conditions marché</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <CircularProgress 
+                    value={Math.round((data.state?.market?.demandIndex || 0.65) * 100)} 
+                    max={100} 
+                    label="Demande"
+                    color="#06b6d4"
+                  />
+                </div>
+                <div className="text-center">
+                  <CircularProgress 
+                    value={Math.round((data.state?.market?.supplyIndex || 0.55) * 100)} 
+                    max={100} 
+                    label="Offre"
+                    color="#8b5cf6"
+                  />
+                </div>
+                <div className="text-center">
+                  <div className="w-32 h-32 mx-auto flex flex-col items-center justify-center">
+                    <span className="text-4xl">⛽</span>
+                    <span className="text-2xl font-bold mt-2">
+                      {(data.state?.market?.fuelPrice?.diesel || 1.85).toFixed(2)}€
+                    </span>
+                    <span className="text-xs text-gray-400">Diesel/L</span>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="w-32 h-32 mx-auto flex flex-col items-center justify-center">
+                    <span className="text-4xl">🚦</span>
+                    <span className="text-2xl font-bold mt-2">
+                      {Math.round((data.state?.market?.trafficIndex || 0.3) * 100)}%
+                    </span>
+                    <span className="text-xs text-gray-400">Congestion</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
+          
+          {/* Bottom Navigation (Mobile) */}
+          <nav className="fixed bottom-0 left-0 right-0 glass mobile-bottom-nav md:hidden">
+            <div className="flex justify-around py-3">
+              {[
+                { icon: '📊', label: 'Dashboard', view: 'dashboard' },
+                { icon: '🎯', label: 'Leads', view: 'leads' },
+                { icon: '🚛', label: 'Missions', view: 'missions' },
+                { icon: '⚙️', label: 'Settings', view: 'settings' }
+              ].map(item => (
+                <button 
+                  key={item.view}
+                  onClick={() => setView(item.view)}
+                  className={`flex flex-col items-center gap-1 px-4 py-1 rounded-xl transition-all
+                    ${view === item.view ? 'bg-white/10' : ''}`}
+                >
+                  <span className="text-xl">{item.icon}</span>
+                  <span className="text-xs">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </nav>
+        </div>
+      );
+    };
+    
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

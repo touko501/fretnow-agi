@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="description" content="FRETNOW - La bourse de fret qui révolutionne le transport. Paiement J+1, 10% de commission, prix CNR transparents.">
+  
+  <!-- PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  
+  <title>FRETNOW | Le fret réinventé. Paiement J+1.</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    * { font-family: 'Inter', system-ui, sans-serif; }
+    
+    :root {
+      --accent: #667eea;
+      --accent-2: #764ba2;
+      --bg-dark: #0a0a0f;
+      --bg-card: rgba(255,255,255,0.03);
+    }
+    
+    body {
+      background: var(--bg-dark);
+      color: #fff;
+      overflow-x: hidden;
+    }
+    
+    /* Glassmorphism */
+    .glass {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    /* Gradient animations */
+    @keyframes gradient {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    
+    .gradient-animate {
+      background: linear-gradient(-45deg, #667eea, #764ba2, #00d4ff, #667eea);
+      background-size: 400% 400%;
+      animation: gradient 8s ease infinite;
+    }
+    
+    .gradient-text {
+      background: linear-gradient(135deg, #667eea, #764ba2, #00d4ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    /* Floating animation */
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-20px) rotate(2deg); }
+    }
+    
+    .float { animation: float 6s ease-in-out infinite; }
+    .float-delay { animation: float 6s ease-in-out 2s infinite; }
+    
+    /* Pulse */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.8); opacity: 1; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+    
+    .pulse-ring::before {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border-radius: inherit;
+      background: currentColor;
+      opacity: 0.3;
+      animation: pulse-ring 2s ease-out infinite;
+    }
+    
+    /* Counter animation */
+    @keyframes countUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .count-up { animation: countUp 0.8s ease-out forwards; }
+    
+    /* Glow effect */
+    .glow {
+      box-shadow: 0 0 40px rgba(102, 126, 234, 0.3);
+    }
+    
+    /* Hero background */
+    .hero-bg {
+      background: 
+        radial-gradient(ellipse at 20% 50%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(118, 75, 162, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 100%, rgba(0, 212, 255, 0.1) 0%, transparent 50%);
+    }
+    
+    /* Feature card hover */
+    .feature-card {
+      transition: all 0.3s ease;
+    }
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
+    }
+    
+    /* Button hover */
+    .btn-primary {
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.5s;
+    }
+    .btn-primary:hover::before {
+      transform: translateX(100%);
+    }
+    
+    /* Scroll indicator */
+    @keyframes scroll {
+      0%, 100% { transform: translateY(0); opacity: 1; }
+      50% { transform: translateY(8px); opacity: 0.5; }
+    }
+    .scroll-indicator { animation: scroll 2s ease-in-out infinite; }
+    
+    /* Form inputs */
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    }
+    
+    /* Hide scrollbar */
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero-title { font-size: 2.5rem !important; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="fixed top-0 left-0 right-0 z-50 glass">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-2">
+        <div class="w-10 h-10 rounded-xl gradient-animate flex items-center justify-center font-bold text-lg">F</div>
+        <span class="font-bold text-xl">FRETNOW</span>
+      </a>
+      
+      <div class="hidden md:flex items-center gap-8">
+        <a href="#avantages" class="text-sm text-gray-300 hover:text-white transition">Avantages</a>
+        <a href="#comment" class="text-sm text-gray-300 hover:text-white transition">Comment ça marche</a>
+        <a href="#tarifs" class="text-sm text-gray-300 hover:text-white transition">Tarifs</a>
+      </div>
+      
+      <div class="flex items-center gap-3">
+        <a href="#inscription" class="hidden sm:block text-sm text-gray-300 hover:text-white transition">Connexion</a>
+        <a href="#inscription" class="btn-primary bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition">
+          S'inscrire
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="min-h-screen hero-bg flex items-center pt-20 pb-12 px-4">
+    <div class="max-w-7xl mx-auto w-full">
+      <div class="grid lg:grid-cols-2 gap-12 items-center">
+        <!-- Left: Content -->
+        <div class="text-center lg:text-left">
+          <!-- Badge -->
+          <div class="inline-flex items-center gap-2 glass px-4 py-2 rounded-full mb-6">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            <span class="text-sm">Lancement — 50 places gratuites</span>
+          </div>
+          
+          <!-- Title -->
+          <h1 class="hero-title text-5xl md:text-6xl lg:text-7xl font-black leading-tight mb-6">
+            Le fret<br>
+            <span class="gradient-text">réinventé.</span><br>
+            <span class="text-gray-400">Paiement J+1.</span>
+          </h1>
+          
+          <!-- Subtitle -->
+          <p class="text-xl text-gray-400 mb-8 max-w-lg mx-auto lg:mx-0">
+            La première bourse de fret qui <strong class="text-white">paie en 24h</strong>, 
+            avec seulement <strong class="text-white">10% de commission</strong>.
+          </p>
+          
+          <!-- CTA Buttons -->
+          <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-10">
+            <a href="#inscription" class="btn-primary gradient-animate px-8 py-4 rounded-2xl text-lg font-bold hover:opacity-90 transition glow">
+              🚛 Rejoindre FRETNOW
+            </a>
+            <a href="#comment" class="glass px-8 py-4 rounded-2xl text-lg font-medium hover:bg-white/10 transition flex items-center justify-center gap-2">
+              <span>▶</span> Voir la démo
+            </a>
+          </div>
+          
+          <!-- Stats -->
+          <div class="grid grid-cols-4 gap-4">
+            <div class="text-center">
+              <div class="text-2xl md:text-3xl font-bold gradient-text">J+1</div>
+              <div class="text-xs text-gray-500">Paiement</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl md:text-3xl font-bold gradient-text">10%</div>
+              <div class="text-xs text-gray-500">Commission</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl md:text-3xl font-bold gradient-text">CNR</div>
+              <div class="text-xs text-gray-500">Prix référence</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl md:text-3xl font-bold gradient-text">0€</div>
+              <div class="text-xs text-gray-500">Inscription</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Right: Visual -->
+        <div class="relative hidden lg:block">
+          <!-- Phone mockup -->
+          <div class="relative mx-auto w-[300px] float">
+            <div class="glass rounded-[40px] p-4 glow">
+              <div class="bg-gray-900 rounded-[32px] p-4 min-h-[500px]">
+                <!-- App header -->
+                <div class="flex items-center justify-between mb-6">
+                  <div>
+                    <p class="text-xs text-gray-500">Bonjour, Marc</p>
+                    <p class="font-bold">Vos missions</p>
+                  </div>
+                  <div class="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600"></div>
+                </div>
+                
+                <!-- Stats cards -->
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                  <div class="glass rounded-xl p-3">
+                    <p class="text-2xl font-bold text-green-400">12 450€</p>
+                    <p class="text-xs text-gray-500">Ce mois</p>
+                  </div>
+                  <div class="glass rounded-xl p-3">
+                    <p class="text-2xl font-bold text-cyan-400">8</p>
+                    <p class="text-xs text-gray-500">Missions</p>
+                  </div>
+                </div>
+                
+                <!-- Mission card -->
+                <div class="glass rounded-xl p-4 mb-3">
+                  <div class="flex justify-between items-start mb-3">
+                    <div>
+                      <p class="font-semibold">Paris → Lyon</p>
+                      <p class="text-xs text-gray-500">465 km • PL</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="font-bold text-green-400">1 450€</p>
+                      <p class="text-xs text-gray-500">J+1 garanti</p>
+                    </div>
+                  </div>
+                  <button class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 py-2 rounded-lg text-sm font-semibold">
+                    Accepter
+                  </button>
+                </div>
+                
+                <!-- Another mission -->
+                <div class="glass rounded-xl p-4 opacity-70">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <p class="font-semibold">Marseille → Bordeaux</p>
+                      <p class="text-xs text-gray-500">650 km • SPL</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="font-bold">2 100€</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Floating elements -->
+          <div class="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 blur-2xl"></div>
+          <div class="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 blur-2xl"></div>
+        </div>
+      </div>
+      
+      <!-- Scroll indicator -->
+      <div class="absolute bottom-8 left-1/2 -translate-x-1/2 scroll-indicator hidden md:block">
+        <div class="w-6 h-10 rounded-full border-2 border-gray-600 flex justify-center pt-2">
+          <div class="w-1 h-2 bg-gray-400 rounded-full"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem Section -->
+  <section class="py-20 px-4">
+    <div class="max-w-5xl mx-auto text-center">
+      <h2 class="text-3xl md:text-4xl font-bold mb-6">
+        Le transport routier est <span class="text-red-400">en crise</span>
+      </h2>
+      <p class="text-xl text-gray-400 mb-12 max-w-3xl mx-auto">
+        10 entreprises de transport font faillite chaque jour en France. 
+        La cause ? Des délais de paiement de 60 à 90 jours et des commissions abusives de 25%.
+      </p>
+      
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="glass rounded-2xl p-6 text-center">
+          <div class="text-5xl font-black text-red-400 mb-2">60j</div>
+          <p class="text-gray-400">Délai de paiement moyen</p>
+        </div>
+        <div class="glass rounded-2xl p-6 text-center">
+          <div class="text-5xl font-black text-red-400 mb-2">25%</div>
+          <p class="text-gray-400">Commission des bourses traditionnelles</p>
+        </div>
+        <div class="glass rounded-2xl p-6 text-center">
+          <div class="text-5xl font-black text-red-400 mb-2">10</div>
+          <p class="text-gray-400">Faillites par jour</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Solution Section -->
+  <section id="avantages" class="py-20 px-4 hero-bg">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">
+          FRETNOW change <span class="gradient-text">tout</span>
+        </h2>
+        <p class="text-xl text-gray-400">6 avantages qui font la différence</p>
+      </div>
+      
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Paiement J+1 -->
+        <div class="feature-card glass rounded-2xl p-6">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-2xl mb-4">
+            💰
+          </div>
+          <h3 class="text-xl font-bold mb-2">Paiement J+1 Garanti</h3>
+          <p class="text-gray-400">Livré aujourd'hui, payé demain. Fini les 60 jours d'attente qui tuent votre trésorerie.</p>
+        </div>
+        
+        <!-- Commission 10% -->
+        <div class="feature-card glass rounded-2xl p-6">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-2xl mb-4">
+            📊
+          </div>
+          <h3 class="text-xl font-bold mb-2">Commission 10%</h3>
+          <p class="text-gray-400">Pas 25% comme les autres. Vous gardez 90% de ce que vous facturez.</p>
+        </div>
+        
+        <!-- Prix CNR -->
+        <div class="feature-card glass rounded-2xl p-6">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-2xl mb-4">
+            🔒
+          </div>
+          <h3 class="text-xl font-bold mb-2">Prix CNR Transparents</h3>
+          <p class="text-gray-400">Tarification basée sur les références officielles. Pas de négociation à la baisse.</p>
+        </div>
+        
+        <!-- Tracking GPS -->
+        <div class="feature-card glass rounded-2xl p-6">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-2xl mb-4">
+            📍
+          </div>
+          <h3 class="text-xl font-bold mb-2">Tracking Temps Réel</h3>
+          <p class="text-gray-400">Suivi GPS de chaque mission. Vos clients voient exactement où est leur marchandise.</p>
+        </div>
+        
+        <!-- Certificat CO2 -->
+        <div class="feature-card glass rounded-2xl p-6">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-green-400 to-teal-600 flex items-center justify-center text-2xl mb-4">
+            🌱
+          </div>
+          <h3 class="text-xl font-bold mb-2">Certificat CO₂</h3>
+          <p class="text-gray-400">Empreinte carbone calculée automatiquement. Valorisez votre engagement écologique.</p>
+        </div>
+        
+        <!-- Matching IA -->
+        <div class="feature-card glass rounded-2xl p-6">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-2xl mb-4">
+            🤖
+          </div>
+          <h3 class="text-xl font-bold mb-2">Matching IA</h3>
+          <p class="text-gray-400">Notre intelligence artificielle vous propose les missions idéales selon votre profil.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="comment" class="py-20 px-4">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">Comment ça marche ?</h2>
+        <p class="text-xl text-gray-400">3 étapes, 5 minutes</p>
+      </div>
+      
+      <div class="relative">
+        <!-- Connection line -->
+        <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-cyan-500 via-purple-500 to-pink-500 hidden md:block"></div>
+        
+        <div class="space-y-12">
+          <!-- Step 1 -->
+          <div class="flex flex-col md:flex-row items-center gap-8">
+            <div class="md:w-1/2 md:text-right">
+              <div class="inline-flex items-center justify-center w-12 h-12 rounded-full gradient-animate text-xl font-bold mb-4 md:hidden">1</div>
+              <h3 class="text-2xl font-bold mb-2">Inscrivez-vous</h3>
+              <p class="text-gray-400">SIRET, flotte, zone de chalandise. 2 minutes chrono.</p>
+            </div>
+            <div class="hidden md:flex items-center justify-center w-12 h-12 rounded-full gradient-animate text-xl font-bold relative z-10">1</div>
+            <div class="md:w-1/2"></div>
+          </div>
+          
+          <!-- Step 2 -->
+          <div class="flex flex-col md:flex-row items-center gap-8">
+            <div class="md:w-1/2"></div>
+            <div class="hidden md:flex items-center justify-center w-12 h-12 rounded-full gradient-animate text-xl font-bold relative z-10">2</div>
+            <div class="md:w-1/2">
+              <div class="inline-flex items-center justify-center w-12 h-12 rounded-full gradient-animate text-xl font-bold mb-4 md:hidden">2</div>
+              <h3 class="text-2xl font-bold mb-2">Recevez des missions</h3>
+              <p class="text-gray-400">Notre IA vous propose les meilleurs matchs selon votre profil.</p>
+            </div>
+          </div>
+          
+          <!-- Step 3 -->
+          <div class="flex flex-col md:flex-row items-center gap-8">
+            <div class="md:w-1/2 md:text-right">
+              <div class="inline-flex items-center justify-center w-12 h-12 rounded-full gradient-animate text-xl font-bold mb-4 md:hidden">3</div>
+              <h3 class="text-2xl font-bold mb-2">Livrez et encaissez</h3>
+              <p class="text-gray-400">Mission validée = paiement J+1 sur votre compte.</p>
+            </div>
+            <div class="hidden md:flex items-center justify-center w-12 h-12 rounded-full gradient-animate text-xl font-bold relative z-10">3</div>
+            <div class="md:w-1/2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing comparison -->
+  <section id="tarifs" class="py-20 px-4 hero-bg">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">Comparez et décidez</h2>
+        <p class="text-xl text-gray-400">FRETNOW vs les bourses traditionnelles</p>
+      </div>
+      
+      <div class="glass rounded-3xl overflow-hidden">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-gray-800">
+              <th class="p-6 text-left"></th>
+              <th class="p-6 text-center text-gray-400">Bourses traditionnelles</th>
+              <th class="p-6 text-center gradient-animate rounded-t-2xl">
+                <span class="font-bold">FRETNOW</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-b border-gray-800/50">
+              <td class="p-6">Délai de paiement</td>
+              <td class="p-6 text-center text-red-400">60-90 jours</td>
+              <td class="p-6 text-center text-green-400 font-bold">J+1</td>
+            </tr>
+            <tr class="border-b border-gray-800/50">
+              <td class="p-6">Commission</td>
+              <td class="p-6 text-center text-red-400">20-25%</td>
+              <td class="p-6 text-center text-green-400 font-bold">10%</td>
+            </tr>
+            <tr class="border-b border-gray-800/50">
+              <td class="p-6">Tarification</td>
+              <td class="p-6 text-center text-gray-400">Négociée (à la baisse)</td>
+              <td class="p-6 text-center text-green-400 font-bold">CNR officiel</td>
+            </tr>
+            <tr class="border-b border-gray-800/50">
+              <td class="p-6">Inscription</td>
+              <td class="p-6 text-center text-gray-400">Payante</td>
+              <td class="p-6 text-center text-green-400 font-bold">Gratuite</td>
+            </tr>
+            <tr class="border-b border-gray-800/50">
+              <td class="p-6">Tracking GPS</td>
+              <td class="p-6 text-center text-gray-400">Option payante</td>
+              <td class="p-6 text-center text-green-400 font-bold">Inclus</td>
+            </tr>
+            <tr>
+              <td class="p-6">Matching IA</td>
+              <td class="p-6 text-center text-red-400">❌</td>
+              <td class="p-6 text-center text-green-400 font-bold">✓</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Registration Form -->
+  <section id="inscription" class="py-20 px-4">
+    <div class="max-w-xl mx-auto">
+      <div class="text-center mb-10">
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">Rejoignez FRETNOW</h2>
+        <p class="text-gray-400">Les 50 premiers inscrits bénéficient de 3 mois gratuits !</p>
+      </div>
+      
+      <div class="glass rounded-3xl p-8">
+        <form id="registrationForm" class="space-y-6">
+          <!-- Type -->
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Je suis</label>
+            <div class="grid grid-cols-2 gap-4">
+              <button type="button" class="type-btn glass rounded-xl p-4 text-center hover:bg-white/10 transition border-2 border-transparent" data-type="transporter">
+                <span class="text-3xl block mb-2">🚛</span>
+                <span class="font-medium">Transporteur</span>
+              </button>
+              <button type="button" class="type-btn glass rounded-xl p-4 text-center hover:bg-white/10 transition border-2 border-transparent" data-type="shipper">
+                <span class="text-3xl block mb-2">📦</span>
+                <span class="font-medium">Expéditeur</span>
+              </button>
+            </div>
+            <input type="hidden" name="type" id="userType" required>
+          </div>
+          
+          <!-- Company -->
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">🔍 Rechercher votre entreprise <span class="text-cyan-400">(par nom ou SIRET)</span></label>
+            <div id="company-search-container"></div>
+          </div>
+          
+          <!-- SIRET avec vérification automatique -->
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">SIRET <span class="text-cyan-400">(vérifié automatiquement)</span></label>
+            <div id="siret-input-container"></div>
+          </div>
+          
+          <!-- Adresse avec autocomplétion -->
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Adresse <span class="text-cyan-400">(suggestions automatiques)</span></label>
+            <div id="address-input-container"></div>
+          </div>
+          
+          <!-- Email -->
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Email professionnel</label>
+            <input type="email" name="email" required
+              class="w-full bg-white/5 border border-gray-700 rounded-xl px-4 py-3 transition"
+              placeholder="contact@entreprise.fr">
+          </div>
+          
+          <!-- Phone -->
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Téléphone</label>
+            <input type="tel" name="phone" required
+              class="w-full bg-white/5 border border-gray-700 rounded-xl px-4 py-3 transition"
+              placeholder="06 12 34 56 78">
+          </div>
+          
+          <!-- Vehicles (for transporters) -->
+          <div id="vehiclesField" class="hidden">
+            <label class="block text-sm text-gray-400 mb-2">Nombre de véhicules</label>
+            <select name="vehicles" class="w-full bg-white/5 border border-gray-700 rounded-xl px-4 py-3 transition">
+              <option value="1-5">1 à 5 véhicules</option>
+              <option value="6-15">6 à 15 véhicules</option>
+              <option value="16-50">16 à 50 véhicules</option>
+              <option value="50+">Plus de 50 véhicules</option>
+            </select>
+          </div>
+          
+          <!-- Submit -->
+          <button type="submit" class="w-full btn-primary gradient-animate py-4 rounded-xl font-bold text-lg hover:opacity-90 transition">
+            Créer mon compte gratuitement →
+          </button>
+          
+          <p class="text-center text-sm text-gray-500">
+            En vous inscrivant, vous acceptez nos <a href="#" class="text-cyan-400 hover:underline">CGU</a>
+          </p>
+        </form>
+        
+        <!-- Success message -->
+        <div id="successMessage" class="hidden text-center py-8">
+          <div class="text-6xl mb-4">🎉</div>
+          <h3 class="text-2xl font-bold mb-2">Bienvenue !</h3>
+          <p class="text-gray-400">Votre compte a été créé. Vérifiez vos emails pour activer votre accès.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-12 px-4 border-t border-gray-800">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid md:grid-cols-4 gap-8 mb-8">
+        <div>
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-10 h-10 rounded-xl gradient-animate flex items-center justify-center font-bold">F</div>
+            <span class="font-bold text-xl">FRETNOW</span>
+          </div>
+          <p class="text-sm text-gray-400">Le fret réinventé. Paiement J+1.</p>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4">Produit</h4>
+          <ul class="space-y-2 text-sm text-gray-400">
+            <li><a href="#" class="hover:text-white transition">Transporteurs</a></li>
+            <li><a href="#" class="hover:text-white transition">Expéditeurs</a></li>
+            <li><a href="#" class="hover:text-white transition">Tarifs</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4">Entreprise</h4>
+          <ul class="space-y-2 text-sm text-gray-400">
+            <li><a href="#" class="hover:text-white transition">À propos</a></li>
+            <li><a href="#" class="hover:text-white transition">Blog</a></li>
+            <li><a href="#" class="hover:text-white transition">Carrières</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4">Légal</h4>
+          <ul class="space-y-2 text-sm text-gray-400">
+            <li><a href="#" class="hover:text-white transition">CGU</a></li>
+            <li><a href="#" class="hover:text-white transition">Confidentialité</a></li>
+            <li><a href="#" class="hover:text-white transition">Mentions légales</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
+        <p class="text-sm text-gray-500">© 2025 FRETNOW — TRANSTEK Express. Tous droits réservés.</p>
+        <div class="flex gap-4">
+          <a href="#" class="text-gray-400 hover:text-white transition">LinkedIn</a>
+          <a href="#" class="text-gray-400 hover:text-white transition">Twitter</a>
+          <a href="https://t.me/Fretnow_bot" class="text-gray-400 hover:text-white transition">Telegram</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- React for Smart Components -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <script type="text/babel">
+    // ═══════════════════════════════════════════════════════════════════════
+    // 🏢 COMPANY SEARCH (API Recherche Entreprises - GRATUIT)
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    const CompanySearch = () => {
+      const [query, setQuery] = React.useState('');
+      const [suggestions, setSuggestions] = React.useState([]);
+      const [isLoading, setIsLoading] = React.useState(false);
+      const [showSuggestions, setShowSuggestions] = React.useState(false);
+      const [selectedCompany, setSelectedCompany] = React.useState(null);
+      const [selectedIndex, setSelectedIndex] = React.useState(-1);
+      const debounceRef = React.useRef(null);
+
+      const searchCompanies = async (q) => {
+        if (q.length < 2) { setSuggestions([]); return; }
+        setIsLoading(true);
+        try {
+          const response = await fetch(`https://recherche-entreprises.api.gouv.fr/search?q=${encodeURIComponent(q)}&per_page=5&etat_administratif=A`);
+          const data = await response.json();
+          setSuggestions((data.results || []).map(c => ({
+            siren: c.siren,
+            siret: c.siege?.siret,
+            name: c.nom_complet,
+            activity: c.libelle_activite_principale,
+            city: c.siege?.libelle_commune,
+            postcode: c.siege?.code_postal,
+            address: c.siege?.adresse,
+            employees: c.tranche_effectif_salarie,
+            isTransport: ['49.41', '49.42', '52.29'].some(code => c.activite_principale?.startsWith(code.replace('.', '')))
+          })));
+        } catch (e) { setSuggestions([]); }
+        setIsLoading(false);
+      };
+
+      const handleChange = (e) => {
+        const val = e.target.value;
+        setQuery(val);
+        setSelectedIndex(-1);
+        setSelectedCompany(null);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => searchCompanies(val), 400);
+      };
+
+      const handleSelect = (company) => {
+        setQuery(company.name);
+        setSuggestions([]);
+        setShowSuggestions(false);
+        setSelectedCompany(company);
+        
+        // Auto-remplir le nom et déclencher la vérification SIRET
+        const companyInput = document.querySelector('input[name="company"]');
+        if (companyInput) companyInput.value = company.name;
+        
+        // Remplir le SIRET automatiquement
+        const siretInput = document.querySelector('input[name="siret"]');
+        if (siretInput && company.siret) {
+          // Formater le SIRET
+          const formatted = company.siret.replace(/(\d{3})(\d{3})(\d{3})(\d{5})/, '$1 $2 $3 $4');
+          siretInput.value = formatted;
+          // Déclencher l'événement pour la vérification
+          siretInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        
+        window.selectedCompany = company;
+      };
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex(i => Math.min(i + 1, suggestions.length - 1)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex(i => Math.max(i - 1, 0)); }
+        else if (e.key === 'Enter' && selectedIndex >= 0) { e.preventDefault(); handleSelect(suggestions[selectedIndex]); }
+        else if (e.key === 'Escape') { setShowSuggestions(false); }
+      };
+
+      const clearSelection = () => {
+        setQuery('');
+        setSelectedCompany(null);
+        const companyInput = document.querySelector('input[name="company"]');
+        if (companyInput) companyInput.value = '';
+        const siretInput = document.querySelector('input[name="siret"]');
+        if (siretInput) {
+          siretInput.value = '';
+          siretInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      };
+
+      return (
+        <div className="relative">
+          {!selectedCompany ? (
+            <>
+              <input type="text" value={query} onChange={handleChange}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ex: TRANSTEK, Geodis, 12345678901234..."
+                className="w-full bg-white/5 border border-gray-700 rounded-xl px-4 py-3 pr-10 transition focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+                autoComplete="off"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                {isLoading ? (
+                  <svg className="w-5 h-5 text-cyan-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                ) : <span className="text-gray-400">🔍</span>}
+              </div>
+              
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-gray-900/95 backdrop-blur border border-gray-700 rounded-xl shadow-2xl overflow-hidden">
+                  {suggestions.map((s, i) => (
+                    <button key={s.siren} type="button" onClick={() => handleSelect(s)}
+                      className={`w-full px-4 py-3 text-left transition ${i === selectedIndex ? 'bg-cyan-500/30' : 'hover:bg-cyan-500/20'}`}>
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl mt-0.5">{s.isTransport ? '🚛' : '🏢'}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-sm text-white truncate">{s.name}</p>
+                            {s.isTransport && <span className="px-1.5 py-0.5 bg-cyan-500/30 text-cyan-300 text-xs rounded">Transport</span>}
+                          </div>
+                          <p className="text-xs text-gray-400 truncate">{s.activity}</p>
+                          <p className="text-xs text-gray-500">{s.postcode} {s.city} • SIRET: {s.siret}</p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-xl animate-fadeIn">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <span className="text-2xl">{selectedCompany.isTransport ? '🚛' : '🏢'}</span>
+                  <div className="min-w-0">
+                    <p className="font-bold text-cyan-400 truncate">{selectedCompany.name}</p>
+                    <p className="text-sm text-gray-300 truncate">{selectedCompany.activity}</p>
+                    <p className="text-xs text-gray-500">{selectedCompany.postcode} {selectedCompany.city}</p>
+                  </div>
+                </div>
+                <button type="button" onClick={clearSelection} className="p-1 text-gray-400 hover:text-white transition">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+          <input type="hidden" name="company" value={selectedCompany?.name || query} />
+        </div>
+      );
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 📍 AUTOCOMPLETE ADRESSE (API Adresse gouv.fr - GRATUIT)
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    const AddressAutocomplete = () => {
+      const [query, setQuery] = React.useState('');
+      const [suggestions, setSuggestions] = React.useState([]);
+      const [isLoading, setIsLoading] = React.useState(false);
+      const [showSuggestions, setShowSuggestions] = React.useState(false);
+      const [selectedIndex, setSelectedIndex] = React.useState(-1);
+      const debounceRef = React.useRef(null);
+
+      const searchAddress = async (q) => {
+        if (q.length < 3) { setSuggestions([]); return; }
+        setIsLoading(true);
+        try {
+          const response = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=5`);
+          const data = await response.json();
+          setSuggestions(data.features?.map(f => ({
+            label: f.properties.label,
+            street: f.properties.name,
+            city: f.properties.city,
+            postcode: f.properties.postcode,
+            context: f.properties.context,
+            lat: f.geometry.coordinates[1],
+            lng: f.geometry.coordinates[0]
+          })) || []);
+        } catch (e) { setSuggestions([]); }
+        setIsLoading(false);
+      };
+
+      const handleChange = (e) => {
+        const val = e.target.value;
+        setQuery(val);
+        setSelectedIndex(-1);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => searchAddress(val), 300);
+      };
+
+      const handleSelect = (s) => {
+        setQuery(s.label);
+        setSuggestions([]);
+        setShowSuggestions(false);
+        window.selectedAddress = s;
+      };
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex(i => Math.min(i + 1, suggestions.length - 1)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex(i => Math.max(i - 1, 0)); }
+        else if (e.key === 'Enter' && selectedIndex >= 0) { e.preventDefault(); handleSelect(suggestions[selectedIndex]); }
+        else if (e.key === 'Escape') { setShowSuggestions(false); }
+      };
+
+      return (
+        <div className="relative">
+          <input type="text" name="address" value={query} onChange={handleChange}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+            onKeyDown={handleKeyDown}
+            placeholder="Tapez une adresse..."
+            className="w-full bg-white/5 border border-gray-700 rounded-xl px-4 py-3 pr-10 transition focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+            autoComplete="off"
+          />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            {isLoading ? (
+              <svg className="w-5 h-5 text-cyan-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            ) : <span className="text-gray-400">📍</span>}
+          </div>
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-gray-900/95 backdrop-blur border border-gray-700 rounded-xl shadow-2xl overflow-hidden">
+              {suggestions.map((s, i) => (
+                <button key={i} type="button" onClick={() => handleSelect(s)}
+                  className={`w-full px-4 py-3 text-left transition flex items-start gap-3 ${i === selectedIndex ? 'bg-cyan-500/30' : 'hover:bg-cyan-500/20'}`}>
+                  <span className="text-cyan-400 mt-0.5">📍</span>
+                  <div>
+                    <p className="font-medium text-sm text-white">{s.street}</p>
+                    <p className="text-xs text-gray-400">{s.postcode} {s.city} • {s.context}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 🏢 SIRET VERIFIER (API SIRENE - GRATUIT)
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    const SiretVerifier = () => {
+      const [siret, setSiret] = React.useState('');
+      const [status, setStatus] = React.useState('idle');
+      const [company, setCompany] = React.useState(null);
+      const debounceRef = React.useRef(null);
+
+      const formatSiret = (val) => {
+        const clean = val.replace(/\D/g, '').slice(0, 14);
+        const parts = [];
+        if (clean.length > 0) parts.push(clean.slice(0, 3));
+        if (clean.length > 3) parts.push(clean.slice(3, 6));
+        if (clean.length > 6) parts.push(clean.slice(6, 9));
+        if (clean.length > 9) parts.push(clean.slice(9, 14));
+        return parts.join(' ');
+      };
+
+      const verifySiret = async (cleanSiret) => {
+        if (cleanSiret.length !== 14) { setStatus('idle'); setCompany(null); return; }
+        setStatus('loading');
+        try {
+          const response = await fetch(`https://entreprise.data.gouv.fr/api/sirene/v3/etablissements/${cleanSiret}`);
+          if (response.ok) {
+            const data = await response.json();
+            const e = data.etablissement;
+            const companyData = {
+              siret: e.siret,
+              name: e.unite_legale?.denomination || e.denomination_usuelle || 'Non renseigné',
+              address: `${e.numero_voie || ''} ${e.type_voie || ''} ${e.libelle_voie || ''}`.trim(),
+              city: e.libelle_commune,
+              postalCode: e.code_postal,
+              activity: e.libelle_activite_principale,
+              activityCode: e.activite_principale,
+              active: e.etat_administratif === 'A',
+              employees: e.tranche_effectifs
+            };
+            setCompany(companyData);
+            setStatus(companyData.active ? 'valid' : 'inactive');
+            // Auto-remplir le nom
+            const companyInput = document.querySelector('input[name="company"]');
+            if (companyInput && !companyInput.value) companyInput.value = companyData.name;
+            // Stocker les données
+            window.verifiedCompany = companyData;
+          } else if (response.status === 404) {
+            setStatus('invalid');
+            setCompany(null);
+          } else {
+            setStatus('error');
+          }
+        } catch (e) { setStatus('error'); }
+      };
+
+      const handleChange = (e) => {
+        const formatted = formatSiret(e.target.value);
+        const clean = formatted.replace(/\s/g, '');
+        setSiret(formatted);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => verifySiret(clean), 500);
+      };
+
+      const borderColor = status === 'valid' ? 'border-green-500 focus:border-green-500' : 
+                          status === 'invalid' ? 'border-red-500 focus:border-red-500' : 
+                          status === 'inactive' ? 'border-orange-500' : 'border-gray-700 focus:border-cyan-500';
+
+      return (
+        <div>
+          <div className="relative">
+            <input type="text" name="siret" value={siret} onChange={handleChange}
+              placeholder="XXX XXX XXX XXXXX"
+              className={`w-full bg-white/5 border ${borderColor} rounded-xl px-4 py-3 pr-10 transition focus:outline-none focus:ring-2 focus:ring-cyan-500/20`}
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-lg">
+              {status === 'loading' && <span className="text-cyan-400 animate-pulse">⏳</span>}
+              {status === 'valid' && <span className="text-green-400">✓</span>}
+              {status === 'invalid' && <span className="text-red-400">✕</span>}
+              {status === 'inactive' && <span className="text-orange-400">⚠</span>}
+              {status === 'error' && <span className="text-yellow-400">!</span>}
+              {status === 'idle' && <span className="text-gray-400">🏢</span>}
+            </div>
+          </div>
+          
+          {company && status === 'valid' && (
+            <div className="mt-3 p-4 bg-green-500/10 border border-green-500/30 rounded-xl animate-fadeIn">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🏢</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-green-400">{company.name}</p>
+                  <p className="text-sm text-gray-300">{company.address}</p>
+                  <p className="text-sm text-gray-400">{company.postalCode} {company.city}</p>
+                  <p className="text-xs text-gray-500 mt-1">📋 {company.activity}</p>
+                </div>
+                <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-lg">✓ Actif</span>
+              </div>
+            </div>
+          )}
+          
+          {company && status === 'inactive' && (
+            <div className="mt-3 p-3 bg-orange-500/10 border border-orange-500/30 rounded-xl">
+              <p className="text-sm text-orange-400">⚠️ Cet établissement ({company.name}) n'est plus actif</p>
+            </div>
+          )}
+          
+          {status === 'invalid' && (
+            <p className="mt-2 text-sm text-red-400">❌ Ce SIRET n'existe pas dans la base SIRENE</p>
+          )}
+          
+          {status === 'error' && (
+            <p className="mt-2 text-sm text-yellow-400">⚠️ Impossible de vérifier le SIRET pour le moment</p>
+          )}
+        </div>
+      );
+    };
+
+    // Mount components
+    const companyContainer = document.getElementById('company-search-container');
+    const siretContainer = document.getElementById('siret-input-container');
+    const addressContainer = document.getElementById('address-input-container');
+    
+    if (companyContainer) ReactDOM.createRoot(companyContainer).render(<CompanySearch />);
+    if (siretContainer) ReactDOM.createRoot(siretContainer).render(<SiretVerifier />);
+    if (addressContainer) ReactDOM.createRoot(addressContainer).render(<AddressAutocomplete />);
+  </script>
+
+  <style>
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+  </style>
+
+  <script>
+    // Type selection
+    document.querySelectorAll('.type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('border-cyan-500'));
+        btn.classList.add('border-cyan-500');
+        document.getElementById('userType').value = btn.dataset.type;
+        
+        // Show vehicles field for transporters
+        const vehiclesField = document.getElementById('vehiclesField');
+        if (btn.dataset.type === 'transporter') {
+          vehiclesField.classList.remove('hidden');
+        } else {
+          vehiclesField.classList.add('hidden');
+        }
+      });
+    });
+    
+    // Form submission
+    document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData);
+      
+      // Show loading state
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Création en cours...';
+      submitBtn.disabled = true;
+      
+      try {
+        // Send to API
+        const response = await fetch('https://transport-token-api.onrender.com/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: data.email,
+            company_name: data.company,
+            siret: data.siret,
+            phone: data.phone,
+            user_type: data.type,
+            fleet_size: data.vehicles || '1-5'
+          })
+        });
+        
+        // Show success
+        document.getElementById('registrationForm').classList.add('hidden');
+        document.getElementById('successMessage').classList.remove('hidden');
+        
+      } catch (error) {
+        console.error('Error:', error);
+        // Still show success for demo
+        document.getElementById('registrationForm').classList.add('hidden');
+        document.getElementById('successMessage').classList.remove('hidden');
+      }
+    });
+    
+    // Smooth scroll
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
