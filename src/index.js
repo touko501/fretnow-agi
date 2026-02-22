@@ -26,10 +26,16 @@ app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
-// ═══ STATIC FILES (uploads) ═══
+// ═══ STATIC FILES ═══
 const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
+
+// Serve frontend from public/
+const publicDir = path.join(__dirname, '../public');
+if (fs.existsSync(publicDir)) {
+  app.use(express.static(publicDir));
+}
 
 // ═══ API ROUTES ═══
 const publicRoutes = require('./routes/public');
@@ -98,34 +104,6 @@ app.get('/api/fix', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ═══ DEBUG LOGIN (temporary) ═══
-app.post('/api/debug-login', async (req, res) => {
-  try {
-    const prisma = require('./config/database');
-    const bcrypt = require('bcryptjs');
-    const { email, password } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.json({ step: 'user_not_found', email });
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) return res.json({ step: 'password_mismatch', hashPrefix: user.passwordHash.substring(0, 20) });
-    // Try session creation
-    const { generateTokens } = require('./middleware/auth');
-    const tokens = generateTokens(user.id);
-    try {
-      await prisma.session.create({
-        data: {
-          userId: user.id, token: tokens.accessToken, refreshToken: tokens.refreshToken,
-          userAgent: 'debug', ipAddress: '0.0.0.0',
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        },
-      });
-      res.json({ step: 'success', userId: user.id, role: user.role });
-    } catch (sessionErr) {
-      res.json({ step: 'session_error', error: sessionErr.message });
-    }
-  } catch (e) { res.json({ step: 'error', error: e.message }); }
-});
-
 // ═══ API DOCS (dev only) ═══
 app.get('/api', (req, res) => {
   res.json({
@@ -149,10 +127,16 @@ app.get('/api', (req, res) => {
   });
 });
 
-// ═══ 404 HANDLER ═══
+// ═══ 404 HANDLER (API) ═══
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: 'Route non trouvée', path: req.originalUrl });
 });
+
+// ═══ SPA CATCH-ALL ═══
+const indexHtml = path.join(__dirname, '../public/index.html');
+if (fs.existsSync(indexHtml)) {
+  app.get('*', (req, res) => res.sendFile(indexHtml));
+}
 
 // ═══ ERROR HANDLER ═══
 app.use((err, req, res, next) => {
