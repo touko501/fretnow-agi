@@ -66,20 +66,16 @@ app.get('/api/seed', async (req, res) => {
     if (count > 0) return res.json({ message: `Already seeded (${count} users)` });
     const sqlFile = path.join(__dirname, '../sql/fretnow-seed.sql');
     if (!fs.existsSync(sqlFile)) return res.status(404).json({ error: 'No seed file' });
-    const sql = fs.readFileSync(sqlFile, 'utf8')
-      .replace(/DO \$\$[\s\S]*?\$\$;?/g, '')
-      .split(';')
-      .map(s => s.trim())
-      .map(s => s.replace(/^(\s*--[^\n]*\n)*/g, '').trim())
-      .filter(s => s.length > 10);
-    let ok = 0, errors = [];
-    for (const stmt of sql) {
-      try { await prisma.$executeRawUnsafe(stmt); ok++; }
-      catch (e) { errors.push(e.message.slice(0, 80)); }
-    }
+    const sql = fs.readFileSync(sqlFile, 'utf8').replace(/DO \$\$[\s\S]*?\$\$;?/g, '');
+    const { Client } = require('pg');
+    const client = new Client({ connectionString: process.env.DATABASE_URL });
+    await client.connect();
+    await client.query(sql);
+    await client.end();
     const users = await prisma.user.count();
     const missions = await prisma.mission.count();
-    res.json({ seeded: true, statements: { total: sql.length, ok, errors: errors.length }, data: { users, missions }, errorDetails: errors.slice(0, 5) });
+    const companies = await prisma.company.count();
+    res.json({ seeded: true, data: { users, missions, companies } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
