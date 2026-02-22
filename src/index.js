@@ -70,7 +70,8 @@ app.get('/api/seed', async (req, res) => {
       .replace(/DO \$\$[\s\S]*?\$\$;?/g, '')
       .split(';')
       .map(s => s.trim())
-      .filter(s => s.length > 10 && !s.startsWith('--'));
+      .map(s => s.replace(/^(\s*--[^\n]*\n)*/g, '').trim())
+      .filter(s => s.length > 10);
     let ok = 0, errors = [];
     for (const stmt of sql) {
       try { await prisma.$executeRawUnsafe(stmt); ok++; }
