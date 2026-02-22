@@ -2,6 +2,25 @@
 -- FRETNOW — SEED DATA v5.1
 -- ═══════════════════════════════════════════════════════════════════════════
 
+-- Fix: Prisma @updatedAt doesn't set DB defaults
+ALTER TABLE "Zone" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "Company" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "User" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "Driver" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "Vehicle" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "Mission" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "Bid" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "Rating" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "Payment" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "Favorite" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "Notification" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "Document" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "MissionStatusLog" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "TransporteurZone" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "CnrIndex" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "Setting" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+ALTER TABLE "AuditLog" ALTER COLUMN "updatedAt" SET DEFAULT NOW();
+
 -- ═══ ZONES FRANCE ═══
 INSERT INTO "Zone" (id, name, code, departments) VALUES
 ('z-idf',  'Île-de-France',    'IDF', ARRAY['75','77','78','91','92','93','94','95']),
