@@ -39,7 +39,7 @@ const useAuth = () => {
       try {
         setToken(saved);
         setUser(JSON.parse(savedUser));
-      } catch {}
+      } catch (e) {}
     }
     setLoading(false);
   }, []);
@@ -57,7 +57,7 @@ const useAuth = () => {
     try {
       localStorage.setItem("fn_token", data.accessToken);
       localStorage.setItem("fn_user", JSON.stringify(data.user));
-    } catch {}
+    } catch (e) {}
     return data;
   };
 
@@ -67,7 +67,7 @@ const useAuth = () => {
     try {
       localStorage.removeItem("fn_token");
       localStorage.removeItem("fn_user");
-    } catch {}
+    } catch (e) {}
   };
 
   const api = useCallback(
@@ -645,7 +645,7 @@ const Dashboard = ({ api, user }) => {
           try {
             const d = await api("/admin/dashboard");
             setStats(d.stats);
-          } catch {}
+          } catch (e) {}
         }
       } catch (err) {
         console.error(err);
