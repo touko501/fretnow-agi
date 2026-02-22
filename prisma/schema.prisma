@@ -1,5 +1,5 @@
 // FRETNOW — SCHEMA DATABASE v5.0 PRODUCTION
-// Marketplace de fret routier B2B - Commissionnaire digital
+// Marketplace de fret routier B2B - Plateforme digitale
 // Stack: PostgreSQL 15+ - Prisma ORM
 
 generator client {
@@ -33,6 +33,7 @@ enum CompanyType {
   CHARGEUR
   TRANSPORTEUR
   COMMISSIONNAIRE
+  PLATEFORME
 }
 
 enum MissionStatus {

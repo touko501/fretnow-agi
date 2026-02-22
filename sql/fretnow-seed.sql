@@ -39,7 +39,7 @@ INSERT INTO "Zone" (id, name, code, departments) VALUES
 
 -- ═══ ENTREPRISE FRETNOW ═══
 INSERT INTO "Company" (id, type, name, "tradeName", siren, siret, "tvaIntra", naf, address, "postalCode", city, country, lat, lon, phone, email, website, "isVerified", "verifiedAt") VALUES
-('co-fretnow', 'COMMISSIONNAIRE', 'FRETNOW AGI', 'FRETNOW', '987654321', '98765432100010', 'FR12987654321', '5229A', '15 Rue de la Paix', '75002', 'Paris', 'FR', 48.8698, 2.3308, '+33155667788', 'contact@fretnow.com', 'https://fretnow.com', true, '2026-01-15');
+('co-fretnow', 'PLATEFORME', 'FRETNOW AGI', 'FRETNOW', '987654321', '98765432100010', 'FR12987654321', '5229A', '15 Rue de la Paix', '75002', 'Paris', 'FR', 48.8698, 2.3308, '+33155667788', 'contact@fretnow.com', 'https://fretnow.com', true, '2026-01-15');
 
 -- ═══ ENTREPRISES TRANSPORTEURS ═══
 INSERT INTO "Company" (id, type, name, "tradeName", siren, siret, "tvaIntra", naf, address, "postalCode", city, country, lat, lon, phone, email, "licenceNumber", "licenceType", "isVerified", "verifiedAt") VALUES

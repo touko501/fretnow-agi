@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // FRETNOW AGI — API SERVER v5.1
-// Marketplace Fret Routier B2B · Commissionnaire Digital
+// Marketplace Fret Routier B2B · Plateforme Digitale
 // ═══════════════════════════════════════════════════════════════════════════
 
 const express = require('express');
@@ -76,6 +76,25 @@ app.get('/api/seed', async (req, res) => {
     const missions = await prisma.mission.count();
     const companies = await prisma.company.count();
     res.json({ seeded: true, data: { users, missions, companies } });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══ FIX ENDPOINT (one-time) ═══
+app.get('/api/fix', async (req, res) => {
+  try {
+    const { Client } = require('pg');
+    const bcrypt = require('bcryptjs');
+    const client = new Client({ connectionString: process.env.DATABASE_URL });
+    await client.connect();
+    // Add PLATEFORME to CompanyType enum if not exists
+    await client.query(`DO $tag$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'PLATEFORME' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'CompanyType')) THEN ALTER TYPE "CompanyType" ADD VALUE 'PLATEFORME'; END IF; END $tag$;`);
+    // Update FRETNOW company type
+    await client.query(`UPDATE "Company" SET type = 'PLATEFORME' WHERE id = 'co-fretnow'`);
+    // Fix all password hashes (admin123)
+    const hash = await bcrypt.hash('admin123', 12);
+    const result = await client.query(`UPDATE "User" SET "passwordHash" = $1`, [hash]);
+    await client.end();
+    res.json({ fixed: true, passwordsUpdated: result.rowCount, newHash: hash.substring(0, 20) + '...' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
