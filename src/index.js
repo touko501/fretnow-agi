@@ -98,6 +98,34 @@ app.get('/api/fix', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ═══ DEBUG LOGIN (temporary) ═══
+app.post('/api/debug-login', async (req, res) => {
+  try {
+    const prisma = require('./config/database');
+    const bcrypt = require('bcryptjs');
+    const { email, password } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.json({ step: 'user_not_found', email });
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) return res.json({ step: 'password_mismatch', hashPrefix: user.passwordHash.substring(0, 20) });
+    // Try session creation
+    const { generateTokens } = require('./middleware/auth');
+    const tokens = generateTokens(user.id);
+    try {
+      await prisma.session.create({
+        data: {
+          userId: user.id, token: tokens.accessToken, refreshToken: tokens.refreshToken,
+          userAgent: 'debug', ipAddress: '0.0.0.0',
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      });
+      res.json({ step: 'success', userId: user.id, role: user.role });
+    } catch (sessionErr) {
+      res.json({ step: 'session_error', error: sessionErr.message });
+    }
+  } catch (e) { res.json({ step: 'error', error: e.message }); }
+});
+
 // ═══ API DOCS (dev only) ═══
 app.get('/api', (req, res) => {
   res.json({
