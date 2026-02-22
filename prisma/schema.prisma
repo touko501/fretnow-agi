@@ -1,0 +1,894 @@
+// FRETNOW — SCHEMA DATABASE v5.0 PRODUCTION
+// Marketplace de fret routier B2B - Commissionnaire digital
+// Stack: PostgreSQL 15+ - Prisma ORM
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "filteredRelationCount"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS
+
+enum UserRole {
+  CHARGEUR
+  TRANSPORTEUR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  BANNED
+  DELETED
+}
+
+enum CompanyType {
+  CHARGEUR
+  TRANSPORTEUR
+  COMMISSIONNAIRE
+}
+
+enum MissionStatus {
+  DRAFT
+  PUBLISHED
+  BIDDING
+  ASSIGNED
+  ACCEPTED
+  PICKUP
+  IN_TRANSIT
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum BidStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  WITHDRAWN
+  COUNTER
+}
+
+enum VehicleType {
+  FOURGON_3T5
+  FOURGON_12M3
+  FOURGON_20M3
+  PORTEUR_7T5
+  PORTEUR_12T
+  PORTEUR_19T
+  SEMI_TAUTLINER
+  SEMI_FRIGO
+  SEMI_BACHE
+  SEMI_BENNE
+  SEMI_CITERNE
+  SEMI_PLATEAU
+  SEMI_PORTE_CONTENEUR
+  MEGA_TRAILER
+}
+
+enum FuelType {
+  DIESEL_B7
+  HVO100
+  B100_COLZA
+  GNL
+  BIO_GNL
+  ELECTRIQUE
+  HYDROGENE
+}
+
+enum DocumentType {
+  KBIS
+  ATTESTATION_ASSURANCE
+  ASSURANCE_MARCHANDISE
+  LICENCE_TRANSPORT
+  CGV
+  PERMIS_CONDUIRE
+  CARTE_CONDUCTEUR
+  FIMO_FCO
+  ADR
+  CMR
+  BON_LIVRAISON
+  PHOTO_CHARGEMENT
+  PHOTO_LIVRAISON
+  FACTURE
+  AVOIR
+  CARTE_GRISE
+  CONTROLE_TECHNIQUE
+  AUTRE
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentMethod {
+  STRIPE
+  VIREMENT
+  PRELEVEMENT
+  PLATEFORME
+}
+
+enum DisputeStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED_CHARGEUR
+  RESOLVED_TRANSPORTEUR
+  ESCALATED
+  CLOSED
+}
+
+enum NotificationType {
+  MISSION_PUBLISHED
+  MISSION_ASSIGNED
+  MISSION_CANCELLED
+  MISSION_UPDATE
+  NEW_BID
+  BID_ACCEPTED
+  BID_REJECTED
+  BID_EXPIRED
+  COUNTER_OFFER
+  PICKUP_STARTED
+  IN_TRANSIT
+  DELIVERY_ARRIVED
+  DELIVERY_CONFIRMED
+  PAYMENT_RECEIVED
+  PAYMENT_SENT
+  COMMISSION_EARNED
+  INVOICE_READY
+  RATING_RECEIVED
+  DOCUMENT_EXPIRING
+  DOCUMENT_VALIDATED
+  VERIFICATION_APPROVED
+  SYSTEM
+  WELCOME
+  MAINTENANCE
+}
+
+enum CheckItemCategory {
+  SECURITE
+  NIVEAUX
+  ARRIMAGE
+  DOCUMENTS
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+// UTILISATEURS
+
+model User {
+  id              String      @id @default(cuid())
+  email           String      @unique
+  passwordHash    String
+  firstName       String
+  lastName        String
+  phone           String?
+  avatar          String?
+  role            UserRole    @default(CHARGEUR)
+  status          UserStatus  @default(PENDING_VERIFICATION)
+  emailVerified   Boolean     @default(false)
+  kycVerified     Boolean     @default(false)
+  locale          String      @default("fr")
+  timezone        String      @default("Europe/Paris")
+
+  companyId       String?
+  company         Company?    @relation(fields: [companyId], references: [id])
+
+  stripeCustomerId  String?   @unique
+  stripeAccountId   String?   @unique
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  lastLoginAt     DateTime?
+  deletedAt       DateTime?
+
+  missionsAsClient      Mission[]         @relation("ClientMissions")
+  bids                  Bid[]
+  ratingsGiven          Rating[]          @relation("RatingsGiven")
+  ratingsReceived       Rating[]          @relation("RatingsReceived")
+  notifications         Notification[]
+  documents             Document[]
+  sessions              Session[]
+  auditLogs             AuditLog[]
+  invitesSent           InviteCode[]      @relation("InviteSender")
+  invitesUsed           InviteCode[]      @relation("InviteReceiver")
+  disputesOpened        Dispute[]         @relation("DisputeOpener")
+  favoritesGiven        Favorite[]        @relation("FavGiven")
+  favoritesReceived     Favorite[]        @relation("FavReceived")
+
+  @@index([email])
+  @@index([role, status])
+  @@index([companyId])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+// ENTREPRISES
+
+model Company {
+  id              String      @id @default(cuid())
+  type            CompanyType
+  name            String
+  tradeName       String?
+  siren           String      @unique
+  siret           String      @unique
+  tvaIntra        String?
+  naf             String?
+
+  address         String
+  postalCode      String
+  city            String
+  country         String      @default("FR")
+  lat             Float?
+  lon             Float?
+
+  phone           String?
+  email           String?
+  website         String?
+
+  licenceNumber   String?
+  licenceType     String?
+  insuranceNumber String?
+  insuranceExpiry DateTime?
+
+  stripeAccountId String?     @unique
+
+  isVerified      Boolean     @default(false)
+  verifiedAt      DateTime?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  users           User[]
+  vehicles        Vehicle[]
+  invoicesSent    Invoice[]   @relation("InvoiceSender")
+  invoicesReceived Invoice[]  @relation("InvoiceReceiver")
+  drivers         Driver[]
+
+  @@index([siren])
+  @@index([siret])
+  @@index([city, country])
+  @@index([type, isVerified])
+}
+
+// CONDUCTEURS
+
+model Driver {
+  id              String      @id @default(cuid())
+  companyId       String
+  company         Company     @relation(fields: [companyId], references: [id])
+
+  firstName       String
+  lastName        String
+  phone           String
+  email           String?
+  licenceNumber   String?
+  licenceExpiry   DateTime?
+  fimofcoExpiry   DateTime?
+  adrCertified    Boolean     @default(false)
+
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  missions        Mission[]   @relation("DriverMissions")
+  vehicleChecks   VehicleCheck[]
+  gpsPositions    GpsPosition[]
+
+  @@index([companyId, isActive])
+}
+
+// VEHICULES
+
+model Vehicle {
+  id              String      @id @default(cuid())
+  companyId       String
+  company         Company     @relation(fields: [companyId], references: [id])
+
+  type            VehicleType
+  brand           String?
+  model           String?
+  year            Int?
+  licensePlate    String      @unique
+  vin             String?
+
+  capacityKg      Float
+  volumeM3        Float?
+  palletSpots     Int?
+  lengthM         Float?
+
+  hasTailLift     Boolean     @default(false)
+  hasTracker      Boolean     @default(false)
+  hasSideOpening  Boolean     @default(false)
+  hasADR          Boolean     @default(false)
+  tempMin         Float?
+  tempMax         Float?
+
+  euroNorm        String?
+  fuelType        FuelType    @default(DIESEL_B7)
+  consumptionPer100km Float?
+
+  costPerKm       Float       @default(0.78)
+  costPerHour     Float       @default(28.0)
+  costPerDay      Float       @default(135.0)
+
+  isActive        Boolean     @default(true)
+  lastInspection  DateTime?
+  insuranceExpiry DateTime?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  missions        Mission[]
+  bids            Bid[]
+  gpsPositions    GpsPosition[]
+  checks          VehicleCheck[]
+
+  @@index([companyId, isActive])
+  @@index([type])
+  @@index([licensePlate])
+}
+
+// MISSIONS
+
+model Mission {
+  id                    String        @id @default(cuid())
+  reference             String        @unique @default(cuid())
+  
+  clientId              String
+  client                User          @relation("ClientMissions", fields: [clientId], references: [id])
+  vehicleId             String?
+  vehicle               Vehicle?      @relation(fields: [vehicleId], references: [id])
+  driverId              String?
+  driver                Driver?       @relation("DriverMissions", fields: [driverId], references: [id])
+
+  status                MissionStatus @default(DRAFT)
+
+  pickupAddress         String
+  pickupCity            String
+  pickupPostalCode      String
+  pickupCountry         String        @default("FR")
+  pickupLat             Float?
+  pickupLon             Float?
+  pickupContact         String?
+  pickupPhone           String?
+  pickupInstructions    String?
+  pickupDateRequested   DateTime?
+  pickupDateActual      DateTime?
+  pickupTimeWindow      String?
+
+  deliveryAddress       String
+  deliveryCity          String
+  deliveryPostalCode    String
+  deliveryCountry       String        @default("FR")
+  deliveryLat           Float?
+  deliveryLon           Float?
+  deliveryContact       String?
+  deliveryPhone         String?
+  deliveryInstructions  String?
+  deliveryDateRequested DateTime?
+  deliveryDateActual    DateTime?
+  deliveryTimeWindow    String?
+
+  goodsDescription      String?
+  goodsValue            Float?
+  weightKg              Float?
+  volumeM3              Float?
+  palletCount           Int?
+  vehicleTypeRequired   VehicleType?
+  isStackable           Boolean       @default(true)
+  isFragile             Boolean       @default(false)
+  requiresTemp          Boolean       @default(false)
+  tempMin               Float?
+  tempMax               Float?
+  isADR                 Boolean       @default(false)
+  adrClass              String?
+  unNumber              String?
+
+  distanceKm            Float?
+  durationMinutes       Int?
+  tolls                 Float?
+  routePolyline         String?
+
+  budgetMaxCents        Int?
+  estimatedPriceCents   Int?
+  finalPriceCents       Int?
+  commissionPercent     Float         @default(8.0)
+  commissionCents       Int?
+  tvaPercent            Float         @default(20.0)
+
+  currentLat            Float?
+  currentLon            Float?
+  progressPercent       Int           @default(0)
+  etaMinutes            Int?
+
+  conditions            String?
+  notes                 String?
+  internalNotes         String?
+
+  publishedAt           DateTime?
+  assignedAt            DateTime?
+  acceptedAt            DateTime?
+  pickupStartedAt       DateTime?
+  inTransitAt           DateTime?
+  deliveredAt           DateTime?
+  completedAt           DateTime?
+  cancelledAt           DateTime?
+  cancelReason          String?
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  deletedAt             DateTime?
+
+  bids                  Bid[]
+  ratings               Rating[]
+  documents             Document[]    @relation("MissionDocuments")
+  gpsPositions          GpsPosition[]
+  payments              Payment[]
+  disputes              Dispute[]
+  invoices              Invoice[]
+  notifications         Notification[]
+  checklistItems        MissionChecklist[]
+  statusHistory         MissionStatusLog[]
+
+  @@index([clientId, status])
+  @@index([status, createdAt])
+  @@index([pickupCity])
+  @@index([deliveryCity])
+  @@index([pickupCity, deliveryCity])
+  @@index([publishedAt])
+  @@index([reference])
+  @@index([vehicleTypeRequired])
+  @@index([deletedAt])
+}
+
+// OFFRES (BIDS)
+
+model Bid {
+  id              String      @id @default(cuid())
+  missionId       String
+  mission         Mission     @relation(fields: [missionId], references: [id])
+  transporteurId  String
+  transporteur    User        @relation(fields: [transporteurId], references: [id])
+  vehicleId       String?
+  vehicle         Vehicle?    @relation(fields: [vehicleId], references: [id])
+
+  status          BidStatus   @default(PENDING)
+  priceCents      Int
+  message         String?
+  availableDate   DateTime?
+  counterCents    Int?
+  
+  expiresAt       DateTime
+  respondedAt     DateTime?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@unique([missionId, transporteurId])
+  @@index([missionId, status])
+  @@index([transporteurId, status])
+  @@index([expiresAt])
+}
+
+// PAIEMENTS
+
+model Payment {
+  id                String        @id @default(cuid())
+  missionId         String
+  mission           Mission       @relation(fields: [missionId], references: [id])
+
+  amountCents       Int
+  amountHtCents     Int
+  tvaCents          Int
+  commissionCents   Int
+  transporteurCents Int
+
+  status            PaymentStatus @default(PENDING)
+  method            PaymentMethod @default(STRIPE)
+
+  stripePaymentId   String?       @unique
+  stripeTransferId  String?
+  stripeRefundId    String?
+
+  paidAt            DateTime?
+  transferredAt     DateTime?
+  refundedAt        DateTime?
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([missionId])
+  @@index([status])
+  @@index([stripePaymentId])
+}
+
+// FACTURES
+
+model Invoice {
+  id              String        @id @default(cuid())
+  number          String        @unique
+  missionId       String?
+  mission         Mission?      @relation(fields: [missionId], references: [id])
+
+  senderId        String
+  sender          Company       @relation("InvoiceSender", fields: [senderId], references: [id])
+  receiverId      String
+  receiver        Company       @relation("InvoiceReceiver", fields: [receiverId], references: [id])
+
+  status          InvoiceStatus @default(DRAFT)
+  amountHtCents   Int
+  tvaPercent      Float         @default(20.0)
+  tvaCents        Int
+  amountTtcCents  Int
+
+  issuedAt        DateTime?
+  dueAt           DateTime?
+  paidAt          DateTime?
+
+  pdfUrl          String?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([number])
+  @@index([senderId, status])
+  @@index([receiverId, status])
+  @@index([dueAt])
+}
+
+// EVALUATIONS
+
+model Rating {
+  id              String      @id @default(cuid())
+  missionId       String
+  mission         Mission     @relation(fields: [missionId], references: [id])
+  giverId         String
+  giver           User        @relation("RatingsGiven", fields: [giverId], references: [id])
+  receiverId      String
+  receiver        User        @relation("RatingsReceived", fields: [receiverId], references: [id])
+
+  score           Int
+  punctuality     Int?
+  communication   Int?
+  cargoCondition  Int?
+  comment         String?
+
+  createdAt       DateTime    @default(now())
+
+  @@unique([missionId, giverId])
+  @@index([receiverId, createdAt])
+  @@index([score])
+}
+
+// LITIGES
+
+model Dispute {
+  id              String        @id @default(cuid())
+  missionId       String
+  mission         Mission       @relation(fields: [missionId], references: [id])
+  openedById      String
+  openedBy        User          @relation("DisputeOpener", fields: [openedById], references: [id])
+
+  status          DisputeStatus @default(OPEN)
+  reason          String
+  description     String?
+  resolution      String?
+  refundCents     Int?
+
+  openedAt        DateTime      @default(now())
+  resolvedAt      DateTime?
+  updatedAt       DateTime      @updatedAt
+
+  @@index([missionId])
+  @@index([status])
+}
+
+// DOCUMENTS
+
+model Document {
+  id              String        @id @default(cuid())
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id])
+  missionId       String?
+  mission         Mission?      @relation("MissionDocuments", fields: [missionId], references: [id])
+
+  type            DocumentType
+  name            String
+  url             String
+  mimeType        String        @default("application/pdf")
+  sizeBytes       Int?
+  
+  isVerified      Boolean       @default(false)
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  expiresAt       DateTime?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([userId, type])
+  @@index([missionId])
+  @@index([expiresAt])
+}
+
+// GPS / TRACKING
+
+model GpsPosition {
+  id              String      @id @default(cuid())
+  missionId       String?
+  mission         Mission?    @relation(fields: [missionId], references: [id])
+  vehicleId       String?
+  vehicle         Vehicle?    @relation(fields: [vehicleId], references: [id])
+  driverId        String?
+  driver          Driver?     @relation(fields: [driverId], references: [id])
+
+  lat             Float
+  lon             Float
+  speed           Float?
+  heading         Float?
+  accuracy        Float?
+
+  recordedAt      DateTime    @default(now())
+
+  @@index([missionId, recordedAt])
+  @@index([vehicleId, recordedAt])
+}
+
+// CHECKS VEHICULE
+
+model VehicleCheck {
+  id              String      @id @default(cuid())
+  vehicleId       String
+  vehicle         Vehicle     @relation(fields: [vehicleId], references: [id])
+  driverId        String
+  driver          Driver      @relation(fields: [driverId], references: [id])
+  missionId       String?
+
+  totalItems      Int         @default(18)
+  checkedItems    Int         @default(0)
+  isComplete      Boolean     @default(false)
+  score           Int         @default(0)
+
+  notes           String?
+  photoUrls       String[]
+
+  completedAt     DateTime?
+  createdAt       DateTime    @default(now())
+
+  items           VehicleCheckItem[]
+
+  @@index([vehicleId, createdAt])
+  @@index([driverId])
+}
+
+model VehicleCheckItem {
+  id              String             @id @default(cuid())
+  checkId         String
+  check           VehicleCheck       @relation(fields: [checkId], references: [id], onDelete: Cascade)
+
+  category        CheckItemCategory
+  label           String
+  isChecked       Boolean            @default(false)
+  isCritical      Boolean            @default(false)
+  comment         String?
+  photoUrl        String?
+
+  @@index([checkId])
+}
+
+// CHECKLIST MISSION (POD)
+
+model MissionChecklist {
+  id              String      @id @default(cuid())
+  missionId       String
+  mission         Mission     @relation(fields: [missionId], references: [id])
+
+  step            String
+  label           String
+  isCompleted     Boolean     @default(false)
+  value           String?
+  completedAt     DateTime?
+
+  @@index([missionId])
+}
+
+// HISTORIQUE STATUTS MISSION
+
+model MissionStatusLog {
+  id              String        @id @default(cuid())
+  missionId       String
+  mission         Mission       @relation(fields: [missionId], references: [id])
+
+  fromStatus      MissionStatus?
+  toStatus        MissionStatus
+  changedBy       String?
+  reason          String?
+  metadata        Json?
+
+  createdAt       DateTime      @default(now())
+
+  @@index([missionId, createdAt])
+}
+
+// NOTIFICATIONS
+
+model Notification {
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id])
+  missionId       String?
+  mission         Mission?         @relation(fields: [missionId], references: [id])
+
+  type            NotificationType
+  title           String
+  message         String
+  data            Json?
+
+  isRead          Boolean          @default(false)
+  readAt          DateTime?
+  sentEmail       Boolean          @default(false)
+  sentPush        Boolean          @default(false)
+  sentSms         Boolean          @default(false)
+
+  createdAt       DateTime         @default(now())
+
+  @@index([userId, isRead, createdAt])
+  @@index([type])
+}
+
+// FAVORIS
+
+model Favorite {
+  id              String      @id @default(cuid())
+  giverId         String
+  giver           User        @relation("FavGiven", fields: [giverId], references: [id])
+  receiverId      String
+  receiver        User        @relation("FavReceived", fields: [receiverId], references: [id])
+
+  createdAt       DateTime    @default(now())
+
+  @@unique([giverId, receiverId])
+  @@index([giverId])
+  @@index([receiverId])
+}
+
+// SESSIONS
+
+model Session {
+  id              String      @id @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+
+  token           String      @unique
+  refreshToken    String?     @unique
+  userAgent       String?
+  ipAddress       String?
+
+  expiresAt       DateTime
+  createdAt       DateTime    @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+// AUDIT LOG
+
+model AuditLog {
+  id              String      @id @default(cuid())
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id])
+
+  action          String
+  entity          String?
+  entityId        String?
+  details         Json?
+  ipAddress       String?
+  userAgent       String?
+
+  createdAt       DateTime    @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// PARRAINAGE
+
+model InviteCode {
+  id              String      @id @default(cuid())
+  code            String      @unique
+  senderId        String
+  sender          User        @relation("InviteSender", fields: [senderId], references: [id])
+  receiverId      String?
+  receiver        User?       @relation("InviteReceiver", fields: [receiverId], references: [id])
+
+  rewardCents     Int         @default(0)
+  usedAt          DateTime?
+  expiresAt       DateTime
+
+  createdAt       DateTime    @default(now())
+
+  @@index([code])
+  @@index([senderId])
+}
+
+// ZONES TARIFAIRES
+
+model Zone {
+  id              String      @id @default(cuid())
+  name            String
+  code            String      @unique
+  departments     String[]
+
+  createdAt       DateTime    @default(now())
+
+  transporteurZones TransporteurZone[]
+
+  @@index([code])
+}
+
+model TransporteurZone {
+  id              String      @id @default(cuid())
+  userId          String
+  zoneId          String
+  zone            Zone        @relation(fields: [zoneId], references: [id])
+
+  isPickup        Boolean     @default(true)
+  isDelivery      Boolean     @default(true)
+
+  @@unique([userId, zoneId])
+  @@index([zoneId])
+}
+
+// PARAMETRES CNR
+
+model CnrIndex {
+  id              String      @id @default(cuid())
+  month           String
+  fuelPricePerL   Float
+  driverCostIndex Float
+  maintenanceIndex Float
+  tollIndex       Float
+  insuranceIndex  Float
+  structureIndex  Float
+
+  source          String      @default("CNR")
+  createdAt       DateTime    @default(now())
+
+  @@unique([month])
+  @@index([month])
+}
+
+// CONFIGURATION PLATEFORME
+
+model Setting {
+  id              String      @id @default(cuid())
+  key             String      @unique
+  value           String
+  description     String?
+  updatedAt       DateTime    @updatedAt
+
+  @@index([key])
+}
