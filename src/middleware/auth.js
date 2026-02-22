@@ -57,8 +57,8 @@ async function optionalAuth(req, res, next) {
 
 // Generate tokens
 function generateTokens(userId) {
-  const accessToken = jwt.sign({ userId }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
-  const refreshToken = jwt.sign({ userId, type: 'refresh' }, env.JWT_REFRESH_SECRET, { expiresIn: env.JWT_REFRESH_EXPIRES_IN });
+  const accessToken = jwt.sign({ userId }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN || '24h' });
+  const refreshToken = jwt.sign({ userId, type: 'refresh' }, env.JWT_REFRESH_SECRET || env.JWT_SECRET, { expiresIn: env.JWT_REFRESH_EXPIRES_IN || '30d' });
   return { accessToken, refreshToken };
 }
 
