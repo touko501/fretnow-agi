@@ -58,6 +58,30 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 
+// ═══ SEED ENDPOINT (one-time use) ═══
+app.get('/api/seed', async (req, res) => {
+  try {
+    const prisma = require('./config/database');
+    const count = await prisma.user.count();
+    if (count > 0) return res.json({ message: `Already seeded (${count} users)` });
+    const sqlFile = path.join(__dirname, '../sql/fretnow-seed.sql');
+    if (!fs.existsSync(sqlFile)) return res.status(404).json({ error: 'No seed file' });
+    const sql = fs.readFileSync(sqlFile, 'utf8')
+      .replace(/DO \$\$[\s\S]*?\$\$;?/g, '')
+      .split(';')
+      .map(s => s.trim())
+      .filter(s => s.length > 10 && !s.startsWith('--'));
+    let ok = 0, errors = [];
+    for (const stmt of sql) {
+      try { await prisma.$executeRawUnsafe(stmt); ok++; }
+      catch (e) { errors.push(e.message.slice(0, 80)); }
+    }
+    const users = await prisma.user.count();
+    const missions = await prisma.mission.count();
+    res.json({ seeded: true, statements: { total: sql.length, ok, errors: errors.length }, data: { users, missions }, errorDetails: errors.slice(0, 5) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ═══ API DOCS (dev only) ═══
 app.get('/api', (req, res) => {
   res.json({
