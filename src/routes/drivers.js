@@ -28,7 +28,9 @@ router.put('/:id', authenticate, isTransporteur, async (req, res) => {
   try {
     const driver = await prisma.driver.findFirst({ where: { id: req.params.id, companyId: req.user.companyId } });
     if (!driver) return res.status(404).json({ error: 'Conducteur non trouvé' });
-    const updated = await prisma.driver.update({ where: { id: driver.id }, data: req.body });
+    // Filtrer les champs modifiables (SÉCURITÉ)
+    const { firstName, lastName, phone, email, licenceNumber, adrCertified, isActive } = req.body;
+    const updated = await prisma.driver.update({ where: { id: driver.id }, data: { firstName, lastName, phone, email, licenceNumber, adrCertified, isActive } });
     res.json(updated);
   } catch (err) { res.status(500).json({ error: 'Erreur serveur' }); }
 });

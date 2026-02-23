@@ -19,7 +19,9 @@ router.put('/profile', authenticate, async (req, res) => {
 router.put('/company', authenticate, async (req, res) => {
   try {
     if (!req.user.companyId) return res.status(400).json({ error: 'Pas d\'entreprise associée' });
-    const company = await prisma.company.update({ where: { id: req.user.companyId }, data: req.body });
+    // Filtrer les champs autorisés (SÉCURITÉ: ne pas passer req.body directement)
+    const { name, phone, email, address, postalCode, city, website, tradeName } = req.body;
+    const company = await prisma.company.update({ where: { id: req.user.companyId }, data: { name, phone, email, address, postalCode, city, website, tradeName } });
     res.json(company);
   } catch (err) { res.status(500).json({ error: 'Erreur serveur' }); }
 });

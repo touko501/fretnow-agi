@@ -26,6 +26,7 @@ enum UserStatus {
   ACTIVE
   SUSPENDED
   BANNED
+  REJECTED
   DELETED
 }
 
@@ -157,6 +158,8 @@ enum NotificationType {
   SYSTEM
   WELCOME
   MAINTENANCE
+  NEW_REGISTRATION
+  VERIFICATION_REJECTED
 }
 
 enum CheckItemCategory {
@@ -200,7 +203,8 @@ model User {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   lastLoginAt     DateTime?
-  deletedAt       DateTime?
+  REJECTED
+  DELETEDAt       DateTime?
 
   missionsAsClient      Mission[]         @relation("ClientMissions")
   bids                  Bid[]
@@ -439,7 +443,8 @@ model Mission {
 
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
-  deletedAt             DateTime?
+  REJECTED
+  DELETEDAt             DateTime?
 
   bids                  Bid[]
   ratings               Rating[]

@@ -31,7 +31,9 @@ router.put('/:id', authenticate, isTransporteur, async (req, res) => {
   try {
     const vehicle = await prisma.vehicle.findFirst({ where: { id: req.params.id, companyId: req.user.companyId } });
     if (!vehicle) return res.status(404).json({ error: 'Véhicule non trouvé' });
-    const updated = await prisma.vehicle.update({ where: { id: vehicle.id }, data: req.body });
+    // Filtrer les champs modifiables (SÉCURITÉ)
+    const { brand, model, year, capacityKg, volumeM3, palletSpots, hasTailLift, hasADR, fuelType, costPerKm, costPerHour, costPerDay, isActive } = req.body;
+    const updated = await prisma.vehicle.update({ where: { id: vehicle.id }, data: { brand, model, year, capacityKg, volumeM3, palletSpots, hasTailLift, hasADR, fuelType, costPerKm, costPerHour, costPerDay, isActive } });
     res.json(updated);
   } catch (err) { res.status(500).json({ error: 'Erreur serveur' }); }
 });

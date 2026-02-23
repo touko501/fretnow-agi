@@ -79,7 +79,7 @@ router.get('/:id', authenticate, async (req, res) => {
         },
         ratings: { select: { id: true, score: true, comment: true, giverId: true, receiverId: true } },
         documents: { select: { id: true, type: true, name: true, url: true, createdAt: true } },
-        statusLogs: { orderBy: { createdAt: 'asc' } },
+        statusHistory: { orderBy: { createdAt: 'asc' } },
         _count: { select: { bids: true, gpsPositions: true } },
       },
     });
