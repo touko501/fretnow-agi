@@ -734,9 +734,123 @@ const DriversPage = ({ api }) => { const [d, sD] = useState([]); const [l, sL] =
 
 const NotificationsPage = ({ api }) => { const [n, sN] = useState([]); const [l, sL] = useState(true); useEffect(() => { api("/notifications").then(d => sN(Array.isArray(d)?d:d.notifications||[])).catch(console.error).finally(() => sL(false)); }, [api]); if(l) return <Spinner />; return (<div><h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Notifications</h1>{n.map(n => (<Card key={n.id} style={{ marginBottom:8, opacity:n.isRead?0.6:1 }}><div style={{ display:"flex", alignItems:"flex-start", gap:12 }}><div style={{ fontSize:20 }}>{n.type?.includes("PAYMENT")?"💰":n.type?.includes("BID")?"💬":"🔔"}</div><div style={{ flex:1 }}><div style={{ fontSize:14, fontWeight:600 }}>{n.title}</div><div style={{ fontSize:13, color:"#94a3b8", marginTop:2 }}>{n.message}</div><div style={{ fontSize:11, color:"#64748b", marginTop:4 }}>{fmtDateTime(n.createdAt)}</div></div></div></Card>))}{n.length===0 && <Card><div style={{ textAlign:"center", color:"#64748b", padding:20 }}>Aucune notification</div></Card>}</div>); };
 
-const AdminUsersPage = ({ api }) => { const [d, sD] = useState({ users:[] }); const [l, sL] = useState(true); useEffect(() => { api("/admin/users").then(sD).catch(console.error).finally(() => sL(false)); }, [api]); if(l) return <Spinner />; const roleIcons = { SUPER_ADMIN:"🔴", ADMIN:"🟠", TRANSPORTEUR:"🔵", CHARGEUR:"🟢" }; return (<div><h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Utilisateurs ({d.pagination?.total||d.users?.length})</h1><div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse" }}><thead><tr style={{ borderBottom:"1px solid rgba(255,255,255,0.08)" }}>{["","Nom","Email","Rôle","Statut","Entreprise"].map(h => <th key={h} style={{ textAlign:"left", padding:"10px 12px", fontSize:11, fontWeight:700, color:"#64748b", textTransform:"uppercase" }}>{h}</th>)}</tr></thead><tbody>{d.users?.map(u => (<tr key={u.id} style={{ borderBottom:"1px solid rgba(255,255,255,0.04)" }}><td style={{ padding:"10px 12px", fontSize:16 }}>{roleIcons[u.role]||"⚪"}</td><td style={{ padding:"10px 12px" }}><div style={{ fontSize:14, fontWeight:600 }}>{u.firstName} {u.lastName}</div></td><td style={{ padding:"10px 12px", fontSize:13, color:"#94a3b8", fontFamily:"monospace" }}>{u.email}</td><td style={{ padding:"10px 12px" }}><Badge status={u.role} /></td><td style={{ padding:"10px 12px" }}><Badge status={u.status} /></td><td style={{ padding:"10px 12px", fontSize:13, color:"#94a3b8" }}>{u.company?.name||"—"}</td></tr>))}</tbody></table></div></div>); };
+const AdminUsersPage = ({ api }) => {
+  const [d, sD] = useState({ users:[] });
+  const [l, sL] = useState(true);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [msg, setMsg] = useState("");
 
-const AdminCompaniesPage = ({ api }) => { const [c, sC] = useState([]); const [l, sL] = useState(true); useEffect(() => { api("/admin/companies").then(d => sC(Array.isArray(d)?d:[])).catch(console.error).finally(() => sL(false)); }, [api]); if(l) return <Spinner />; const tc = { PLATEFORME:"#a78bfa", TRANSPORTEUR:"#60a5fa", CHARGEUR:"#34d399" }; return (<div><h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Entreprises ({c.length})</h1><div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(340px, 1fr))", gap:14 }}>{c.map(c => (<Card key={c.id}><div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}><div style={{ fontSize:16, fontWeight:700 }}>{c.name}</div><span style={{ fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:6, background:`${tc[c.type]||"#94a3b8"}20`, color:tc[c.type]||"#94a3b8", textTransform:"uppercase" }}>{c.type}</span></div><div style={{ fontSize:12, color:"#94a3b8" }}><div>{c.address}, {c.postalCode} {c.city}</div><div>SIREN: {c.siren}</div></div><div style={{ display:"flex", gap:10, marginTop:10, fontSize:11, color:"#64748b" }}><span>{c._count?.users||0} users</span><span>{c._count?.vehicles||0} véhicules</span>{c.isVerified?<span style={{ color:"#22c55e" }}>✓ Vérifié</span>:<span style={{ color:"#fbbf24" }}>En attente</span>}</div></Card>))}</div></div>); };
+  const loadUsers = () => { sL(true); api("/admin/users").then(sD).catch(console.error).finally(() => sL(false)); };
+  useEffect(() => { loadUsers(); }, [api]);
+
+  const doAction = async (id, action, label) => {
+    if (action === "delete" && !confirm(`Supprimer cet utilisateur ? Cette action est irr\u00e9versible.`)) return;
+    setActionLoading(id + action); setMsg("");
+    try {
+      const method = action === "delete" ? "DELETE" : "POST";
+      const path = action === "delete" ? `/admin/users/${id}` : `/admin/users/${id}/${action}`;
+      const r = await api(path, { method });
+      setMsg(r.message || `Action ${label} effectu\u00e9e`);
+      loadUsers();
+    } catch (e) { setMsg(`Erreur: ${e.message}`); }
+    setActionLoading(null);
+  };
+
+  if (l) return <Spinner />;
+  const roleIcons = { SUPER_ADMIN:"\ud83d\udd34", ADMIN:"\ud83d\udfe0", TRANSPORTEUR:"\ud83d\udfe2", CHARGEUR:"\ud83d\udfe1" };
+  const roleLabels = { SUPER_ADMIN:"Admin", ADMIN:"Admin", TRANSPORTEUR:"Transporteur", CHARGEUR:"Chargeur" };
+
+  return (
+    <div>
+      <h1 style={{ fontSize:24, fontWeight:800, marginBottom:8 }}>Utilisateurs ({d.pagination?.total||d.users?.length})</h1>
+      {msg && <SuccessMsg msg={msg} />}
+      <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:16 }}>
+        {d.users?.map(u => {
+          const isPending = u.status === "PENDING_VERIFICATION";
+          const isActive = u.status === "ACTIVE";
+          const isSelf = u.role === "SUPER_ADMIN";
+          return (
+            <Card key={u.id} style={{ padding:16 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12 }}>
+                <div style={{ flex:1, minWidth:200 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                    <span style={{ fontSize:16 }}>{roleIcons[u.role]||"\u26aa"}</span>
+                    <span style={{ fontSize:15, fontWeight:700 }}>{u.firstName} {u.lastName}</span>
+                    <Badge status={u.status} />
+                  </div>
+                  <div style={{ fontSize:12, color:"#94a3b8", fontFamily:"monospace" }}>{u.email}</div>
+                  <div style={{ fontSize:12, color:"#64748b", marginTop:2 }}>{roleLabels[u.role]} {u.company ? `\u2014 ${u.company.name}` : ""}</div>
+                </div>
+                {!isSelf && (
+                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                    {isPending && <Btn variant="success" size="sm" disabled={actionLoading===u.id+"verify"} onClick={() => doAction(u.id, "verify", "V\u00e9rifi\u00e9")}>{actionLoading===u.id+"verify" ? "..." : "\u2705 Accepter"}</Btn>}
+                    {isPending && <Btn variant="danger" size="sm" disabled={actionLoading===u.id+"reject"} onClick={() => doAction(u.id, "reject", "Refus\u00e9")}>{actionLoading===u.id+"reject" ? "..." : "\u274c Refuser"}</Btn>}
+                    {isActive && <Btn variant="danger" size="sm" disabled={actionLoading===u.id+"suspend"} onClick={() => doAction(u.id, "suspend", "Suspendu")}>{actionLoading===u.id+"suspend" ? "..." : "\u23f8 Suspendre"}</Btn>}
+                    <Btn variant="secondary" size="sm" disabled={actionLoading===u.id+"delete"} onClick={() => doAction(u.id, "delete", "Supprim\u00e9")} style={{ color:"#f87171" }}>{actionLoading===u.id+"delete" ? "..." : "\ud83d\uddd1 Supprimer"}</Btn>
+                  </div>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const AdminCompaniesPage = ({ api }) => {
+  const [c, sC] = useState([]);
+  const [l, sL] = useState(true);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [msg, setMsg] = useState("");
+
+  const loadCompanies = () => { sL(true); api("/admin/companies").then(d => sC(Array.isArray(d)?d:[])).catch(console.error).finally(() => sL(false)); };
+  useEffect(() => { loadCompanies(); }, [api]);
+
+  const verifyCompany = async (id) => {
+    setActionLoading(id); setMsg("");
+    try {
+      const r = await api(`/admin/companies/${id}/verify`, { method:"POST" });
+      setMsg(r.message || "Entreprise vérifiée");
+      loadCompanies();
+    } catch (e) { setMsg(`Erreur: ${e.message}`); }
+    setActionLoading(null);
+  };
+
+  if (l) return <Spinner />;
+  const tc = { PLATEFORME:"#a78bfa", TRANSPORTEUR:"#60a5fa", CHARGEUR:"#34d399" };
+
+  return (
+    <div>
+      <h1 style={{ fontSize:24, fontWeight:800, marginBottom:8 }}>Entreprises ({c.length})</h1>
+      {msg && <SuccessMsg msg={msg} />}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(340px, 1fr))", gap:14, marginTop:16 }}>
+        {c.map(co => (
+          <Card key={co.id}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
+              <div style={{ fontSize:16, fontWeight:700 }}>{co.name}</div>
+              <span style={{ fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:6, background:`${tc[co.type]||"#94a3b8"}20`, color:tc[co.type]||"#94a3b8", textTransform:"uppercase" }}>{co.type}</span>
+            </div>
+            <div style={{ fontSize:12, color:"#94a3b8" }}>
+              <div>{co.address}, {co.postalCode} {co.city}</div>
+              <div>SIREN: {co.siren} {co.siret ? `| SIRET: ${co.siret}` : ""}</div>
+            </div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:10 }}>
+              <div style={{ display:"flex", gap:10, fontSize:11, color:"#64748b" }}>
+                <span>{co._count?.users||0} users</span>
+                <span>{co._count?.vehicles||0} véhicules</span>
+              </div>
+              {co.isVerified
+                ? <span style={{ fontSize:12, color:"#22c55e", fontWeight:600 }}>✅ Vérifiée</span>
+                : <Btn variant="success" size="sm" disabled={actionLoading===co.id} onClick={() => verifyCompany(co.id)}>{actionLoading===co.id ? "..." : "✅ Vérifier"}</Btn>
+              }
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 // ═══ MAIN APP ═══
 function App() {

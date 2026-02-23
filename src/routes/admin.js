@@ -114,6 +114,46 @@ router.post('/users/:id/suspend', authenticate, isAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Erreur serveur' }); }
 });
 
+router.post('/users/:id/reject', authenticate, isAdmin, async (req, res) => {
+  try {
+    await prisma.user.update({ where: { id: req.params.id }, data: { status: 'REJECTED' } });
+    await prisma.notification.create({
+      data: {
+        userId: req.params.id, type: 'VERIFICATION_REJECTED', title: 'Inscription refusée',
+        message: req.body.reason || 'Votre inscription a été refusée par l\'administration.',
+        sentEmail: true, sentPush: true,
+      },
+    });
+    await prisma.auditLog.create({
+      data: { userId: req.user.id, action: 'admin.reject_user', entity: 'User', entityId: req.params.id, details: { reason: req.body.reason } },
+    });
+    res.json({ message: 'Utilisateur refusé' });
+  } catch (err) { res.status(500).json({ error: 'Erreur serveur' }); }
+});
+
+router.delete('/users/:id', authenticate, isAdmin, async (req, res) => {
+  try {
+    if (req.params.id === req.user.id) return res.status(400).json({ error: 'Impossible de supprimer votre propre compte' });
+    // Soft delete
+    await prisma.user.update({ where: { id: req.params.id }, data: { deletedAt: new Date(), status: 'SUSPENDED' } });
+    await prisma.session.deleteMany({ where: { userId: req.params.id } });
+    await prisma.auditLog.create({
+      data: { userId: req.user.id, action: 'admin.delete_user', entity: 'User', entityId: req.params.id },
+    });
+    res.json({ message: 'Utilisateur supprimé' });
+  } catch (err) { res.status(500).json({ error: 'Erreur serveur' }); }
+});
+
+router.post('/companies/:id/verify', authenticate, isAdmin, async (req, res) => {
+  try {
+    await prisma.company.update({ where: { id: req.params.id }, data: { isVerified: true, verifiedAt: new Date() } });
+    await prisma.auditLog.create({
+      data: { userId: req.user.id, action: 'admin.verify_company', entity: 'Company', entityId: req.params.id },
+    });
+    res.json({ message: 'Entreprise vérifiée' });
+  } catch (err) { res.status(500).json({ error: 'Erreur serveur' }); }
+});
+
 router.get('/companies', authenticate, isAdmin, async (req, res) => {
   try {
     const companies = await prisma.company.findMany({
