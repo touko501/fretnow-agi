@@ -264,6 +264,7 @@ model Company {
   invoicesSent    Invoice[]   @relation("InvoiceSender")
   invoicesReceived Invoice[]  @relation("InvoiceReceiver")
   drivers         Driver[]
+  wallet          Wallet?
 
   @@index([siren])
   @@index([siret])
@@ -450,6 +451,7 @@ model Mission {
   notifications         Notification[]
   checklistItems        MissionChecklist[]
   statusHistory         MissionStatusLog[]
+  escrow                Escrow?
 
   @@index([clientId, status])
   @@index([status, createdAt])
@@ -861,6 +863,94 @@ model TransporteurZone {
 
   @@unique([userId, zoneId])
   @@index([zoneId])
+}
+
+// PORTEFEUILLE (WALLET)
+
+enum WalletTransactionType {
+  TOPUP
+  RESERVE
+  RELEASE
+  PAYMENT
+  COMMISSION
+  REFUND
+  WITHDRAWAL
+}
+
+enum EscrowStatus {
+  HELD
+  RELEASED
+  PAID
+  REFUNDED
+  CANCELLED
+}
+
+model Wallet {
+  id              String      @id @default(cuid())
+  companyId       String      @unique
+  company         Company     @relation(fields: [companyId], references: [id])
+
+  balanceCents    Int         @default(0)
+  reservedCents   Int         @default(0)
+  currency        String      @default("EUR")
+
+  stripeCustomerId String?    @unique
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  transactions    WalletTransaction[]
+  escrows         Escrow[]
+
+  @@index([companyId])
+}
+
+model WalletTransaction {
+  id              String                 @id @default(cuid())
+  walletId        String
+  wallet          Wallet                 @relation(fields: [walletId], references: [id])
+
+  type            WalletTransactionType
+  amountCents     Int
+  balanceAfter    Int
+  description     String?
+  reference       String?
+
+  stripePaymentId String?
+  missionId       String?
+
+  createdAt       DateTime               @default(now())
+
+  @@index([walletId, createdAt])
+  @@index([type])
+  @@index([missionId])
+}
+
+model Escrow {
+  id              String        @id @default(cuid())
+  walletId        String
+  wallet          Wallet        @relation(fields: [walletId], references: [id])
+  missionId       String        @unique
+  mission         Mission       @relation(fields: [missionId], references: [id])
+
+  amountCents     Int
+  commissionCents Int
+  transporteurCents Int
+  status          EscrowStatus  @default(HELD)
+
+  heldAt          DateTime      @default(now())
+  releasedAt      DateTime?
+  paidAt          DateTime?
+  refundedAt      DateTime?
+
+  stripeTransferId String?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([walletId])
+  @@index([missionId])
+  @@index([status])
 }
 
 // PARAMETRES CNR

@@ -139,4 +139,108 @@ router.get('/audit', authenticate, isAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Erreur serveur' }); }
 });
 
+// ═══ POST /admin/production-reset — Nettoyer la DB pour la production ═══
+router.post('/production-reset', authenticate, isAdmin, async (req, res) => {
+  try {
+    const { newPassword, confirmReset } = req.body;
+    if (confirmReset !== 'RESET_PRODUCTION_FRETNOW') {
+      return res.status(400).json({ error: 'Confirmez avec confirmReset: "RESET_PRODUCTION_FRETNOW"' });
+    }
+    if (!newPassword || newPassword.length < 12) {
+      return res.status(400).json({ error: 'Nouveau mot de passe requis (min 12 caractères)' });
+    }
+
+    const bcrypt = require('bcryptjs');
+    const fs = require('fs');
+    const path = require('path');
+
+    // Exécuter le SQL de reset
+    const sqlFile = path.join(__dirname, '../../sql/production-reset.sql');
+    if (fs.existsSync(sqlFile)) {
+      const sql = fs.readFileSync(sqlFile, 'utf8');
+      const { Client } = require('pg');
+      const client = new Client({ connectionString: process.env.DATABASE_URL });
+      await client.connect();
+      await client.query(sql);
+      await client.end();
+    } else {
+      // Reset manuel si pas de fichier SQL
+      await prisma.notification.deleteMany();
+      await prisma.dispute.deleteMany();
+      await prisma.rating.deleteMany();
+      await prisma.missionStatusLog.deleteMany();
+      await prisma.missionChecklist.deleteMany();
+      await prisma.gpsPosition.deleteMany();
+      await prisma.invoice.deleteMany();
+      await prisma.payment.deleteMany();
+      await prisma.document.deleteMany();
+      await prisma.bid.deleteMany();
+      await prisma.mission.deleteMany();
+      await prisma.vehicleCheckItem.deleteMany();
+      await prisma.vehicleCheck.deleteMany();
+      await prisma.driver.deleteMany();
+      await prisma.vehicle.deleteMany();
+      await prisma.walletTransaction.deleteMany();
+      await prisma.escrow.deleteMany();
+      await prisma.wallet.deleteMany();
+      await prisma.session.deleteMany();
+      await prisma.auditLog.deleteMany();
+      await prisma.favorite.deleteMany();
+      await prisma.inviteCode.deleteMany();
+      await prisma.transporteurZone.deleteMany();
+      await prisma.zone.deleteMany();
+      await prisma.user.deleteMany({ where: { email: { not: 'admin@fretnow.com' } } });
+      await prisma.company.deleteMany({ where: { id: { not: 'co-fretnow' } } });
+    }
+
+    // Mettre à jour le mot de passe admin
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({
+      where: { email: 'admin@fretnow.com' },
+      data: {
+        passwordHash,
+        status: 'ACTIVE',
+        emailVerified: true,
+        kycVerified: true,
+        role: 'SUPER_ADMIN',
+      },
+    });
+
+    // Créer le wallet FRETNOW si pas existant
+    const existingWallet = await prisma.wallet.findUnique({ where: { companyId: 'co-fretnow' } });
+    if (!existingWallet) {
+      await prisma.wallet.create({
+        data: { companyId: 'co-fretnow', balanceCents: 0, reservedCents: 0 },
+      });
+    }
+
+    // Log l'action
+    await prisma.auditLog.create({
+      data: {
+        userId: req.user.id,
+        action: 'admin.production_reset',
+        entity: 'System',
+        details: { timestamp: new Date().toISOString() },
+      },
+    });
+
+    // Compter ce qui reste
+    const [users, companies, missions] = await Promise.all([
+      prisma.user.count(),
+      prisma.company.count(),
+      prisma.mission.count(),
+    ]);
+
+    res.json({
+      success: true,
+      message: 'Base de données nettoyée pour la production',
+      remaining: { users, companies, missions },
+      adminPasswordUpdated: true,
+    });
+  } catch (err) {
+    console.error('Production reset error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

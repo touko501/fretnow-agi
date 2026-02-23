@@ -21,8 +21,9 @@ if (env.NODE_ENV !== 'test') {
 }
 
 // ═══ BODY PARSING ═══
-// Stripe webhook needs raw body — must be before json parser
+// Stripe webhooks need raw body — must be before json parser
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+app.use('/api/wallet/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
@@ -50,6 +51,7 @@ const paymentRoutes = require('./routes/payments');
 const notificationRoutes = require('./routes/notifications');
 const userRoutes = require('./routes/users');
 const adminRoutes = require('./routes/admin');
+const walletRoutes = require('./routes/wallet');
 
 app.use('/api', publicRoutes);
 app.use('/api/auth', authRoutes);
@@ -63,52 +65,13 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/wallet', walletRoutes);
 
-// ═══ SEED ENDPOINT (one-time use) ═══
-app.get('/api/seed', async (req, res) => {
-  try {
-    const prisma = require('./config/database');
-    const count = await prisma.user.count();
-    if (count > 0) return res.json({ message: `Already seeded (${count} users)` });
-    const sqlFile = path.join(__dirname, '../sql/fretnow-seed.sql');
-    if (!fs.existsSync(sqlFile)) return res.status(404).json({ error: 'No seed file' });
-    const sql = fs.readFileSync(sqlFile, 'utf8').replace(/DO \$\$[\s\S]*?\$\$;?/g, '');
-    const { Client } = require('pg');
-    const client = new Client({ connectionString: process.env.DATABASE_URL });
-    await client.connect();
-    await client.query(sql);
-    await client.end();
-    const users = await prisma.user.count();
-    const missions = await prisma.mission.count();
-    const companies = await prisma.company.count();
-    res.json({ seeded: true, data: { users, missions, companies } });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ═══ FIX ENDPOINT (one-time) ═══
-app.get('/api/fix', async (req, res) => {
-  try {
-    const { Client } = require('pg');
-    const bcrypt = require('bcryptjs');
-    const client = new Client({ connectionString: process.env.DATABASE_URL });
-    await client.connect();
-    // Add PLATEFORME to CompanyType enum if not exists
-    await client.query(`DO $tag$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'PLATEFORME' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'CompanyType')) THEN ALTER TYPE "CompanyType" ADD VALUE 'PLATEFORME'; END IF; END $tag$;`);
-    // Update FRETNOW company type
-    await client.query(`UPDATE "Company" SET type = 'PLATEFORME' WHERE id = 'co-fretnow'`);
-    // Fix all password hashes (admin123)
-    const hash = await bcrypt.hash('admin123', 12);
-    const result = await client.query(`UPDATE "User" SET "passwordHash" = $1`, [hash]);
-    await client.end();
-    res.json({ fixed: true, passwordsUpdated: result.rowCount, newHash: hash.substring(0, 20) + '...' });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ═══ API DOCS (dev only) ═══
+// ═══ API DOCS ═══
 app.get('/api', (req, res) => {
   res.json({
     name: 'FRETNOW AGI API',
-    version: '5.1.0',
+    version: '6.0.0',
     status: 'running',
     endpoints: {
       auth: { register: 'POST /api/auth/register', login: 'POST /api/auth/login', me: 'GET /api/auth/me', refresh: 'POST /api/auth/refresh', logout: 'POST /api/auth/logout', password: 'PUT /api/auth/password' },
@@ -122,6 +85,7 @@ app.get('/api', (req, res) => {
       notifications: { list: 'GET /api/notifications', read: 'POST /api/notifications/:id/read', readAll: 'POST /api/notifications/read-all' },
       users: { profile: 'PUT /api/users/profile', company: 'PUT /api/users/company', favorites: 'GET /api/users/favorites', publicProfile: 'GET /api/users/:id/public', deleteAccount: 'DELETE /api/users/account' },
       admin: { dashboard: 'GET /api/admin/dashboard', users: 'GET /api/admin/users', verify: 'POST /api/admin/users/:id/verify', suspend: 'POST /api/admin/users/:id/suspend', companies: 'GET /api/admin/companies', audit: 'GET /api/admin/audit' },
+      wallet: { balance: 'GET /api/wallet/balance', transactions: 'GET /api/wallet/transactions', topup: 'POST /api/wallet/topup', reserve: 'POST /api/wallet/reserve', release: 'POST /api/wallet/release', refund: 'POST /api/wallet/refund' },
       public: { health: 'GET /api/health', zones: 'GET /api/zones', settings: 'GET /api/settings', cnr: 'GET /api/cnr' },
     },
   });
@@ -150,7 +114,7 @@ app.use((err, req, res, next) => {
 app.listen(env.PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════╗
-║  🚛 FRETNOW AGI API v5.1                         ║
+║  🚛 FRETNOW AGI API v6.0                         ║
 ║  Mode: ${env.NODE_ENV.padEnd(42)}║
 ║  Port: ${String(env.PORT).padEnd(42)}║
 ║  DB: ${(env.DATABASE_URL ? '✅ Connected' : '❌ Missing').padEnd(44)}║
