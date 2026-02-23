@@ -401,6 +401,7 @@ const Sidebar = ({ user, page, setPage, logout }) => {
 
   const items = [
     { key:"dashboard", icon:"📊", label:"Tableau de bord" },
+    ...(isTransporteur ? [{ key:"freight-exchange", icon:"📦", label:"Bourse de fret" }] : []),
     { key:"missions", icon:"🚛", label:"Missions" },
     ...(isChargeur ? [{ key:"new-mission", icon:"➕", label:"Nouvelle mission" }] : []),
     ...(isTransporteur ? [{ key:"my-bids", icon:"💰", label:"Mes offres" }] : []),
@@ -725,6 +726,116 @@ const NewMissionPage = ({ api, setPage }) => {
   );
 };
 
+// ═══ FREIGHT EXCHANGE (BOURSE DE FRET) ═══
+const FreightExchangePage = ({ api, user, setPage, setSelectedMission }) => {
+  const [missions, setMissions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [bidMission, setBidMission] = useState(null);
+  const [bidPrice, setBidPrice] = useState("");
+  const [bidMessage, setBidMessage] = useState("");
+  const [bidLoading, setBidLoading] = useState(false);
+  const [bidResult, setBidResult] = useState("");
+  const [bidError, setBidError] = useState("");
+
+  useEffect(() => {
+    api("/missions?status=PUBLISHED&limit=50")
+      .then(d => setMissions(d.missions||[]))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [api]);
+
+  const submitBid = async (missionId) => {
+    const cents = Math.round(parseFloat(bidPrice) * 100);
+    if (!cents || cents < 100) { setBidError("Montant minimum 1€"); return; }
+    setBidLoading(true); setBidError(""); setBidResult("");
+    try {
+      await api(`/missions/${missionId}/bids`, {
+        method: "POST",
+        body: JSON.stringify({ priceCents: cents, message: bidMessage || undefined }),
+      });
+      setBidResult("Offre envoyée !");
+      setBidPrice(""); setBidMessage("");
+      setTimeout(() => { setBidMission(null); setBidResult(""); }, 1500);
+    } catch (e) { setBidError(e.message); }
+    setBidLoading(false);
+  };
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div>
+      <div style={{ marginBottom:24 }}>
+        <h1 style={{ fontSize:24, fontWeight:800 }}>📦 Bourse de fret</h1>
+        <p style={{ color:"#64748b", fontSize:14, marginTop:4 }}>Missions disponibles — Proposez votre prix et remportez le transport</p>
+      </div>
+
+      {missions.length === 0 ? (
+        <Card style={{ textAlign:"center", padding:40 }}>
+          <div style={{ fontSize:40, marginBottom:12 }}>🚛</div>
+          <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>Aucune mission disponible</div>
+          <div style={{ color:"#64748b", fontSize:14 }}>Les nouvelles missions des chargeurs apparaîtront ici.<br/>Revenez régulièrement pour ne rien manquer !</div>
+        </Card>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          {missions.map(m => (
+            <Card key={m.id} style={{ padding:20 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12 }}>
+                <div style={{ flex:1, minWidth:250, cursor:"pointer" }} onClick={() => { setSelectedMission(m.id); setPage("mission-detail"); }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+                    <Badge status={m.status} />
+                    <span style={{ fontSize:12, color:"#64748b", fontFamily:"monospace" }}>{m.reference}</span>
+                    {m._count?.bids > 0 && <span style={{ fontSize:11, padding:"2px 8px", borderRadius:4, background:"rgba(249,115,22,0.15)", color:"#f97316", fontWeight:700 }}>{m._count.bids} offre{m._count.bids>1?"s":""}</span>}
+                  </div>
+                  <div style={{ fontSize:18, fontWeight:800, marginBottom:4 }}>{m.pickupCity} → {m.deliveryCity}</div>
+                  <div style={{ fontSize:13, color:"#94a3b8" }}>
+                    {m.goodsDescription||"Marchandise"}
+                    {m.weightKg ? ` • ${(m.weightKg/1000).toFixed(1)}t` : ""}
+                    {m.palletCount ? ` • ${m.palletCount} pal.` : ""}
+                    {m.vehicleTypeRequired ? ` • ${vehicleLabels[m.vehicleTypeRequired]||m.vehicleTypeRequired}` : ""}
+                  </div>
+                  <div style={{ display:"flex", gap:16, marginTop:8, fontSize:12, color:"#64748b" }}>
+                    {m.pickupDateRequested && <span>📅 {fmtDate(m.pickupDateRequested)}</span>}
+                    {m.distanceKm && <span>📍 {m.distanceKm} km</span>}
+                  </div>
+                </div>
+                <div style={{ textAlign:"right", minWidth:150 }}>
+                  <div style={{ fontSize:24, fontWeight:900, color:"#fbbf24" }}>{fmt(m.budgetMaxCents)}</div>
+                  <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>Budget max</div>
+                  {m.distanceKm && m.budgetMaxCents && (
+                    <div style={{ fontSize:12, color:"#94a3b8", marginTop:4 }}>{((m.budgetMaxCents/100)/m.distanceKm).toFixed(2)} €/km</div>
+                  )}
+                  <div style={{ marginTop:12 }}>
+                    {bidMission === m.id ? (
+                      <div style={{ textAlign:"left" }}>
+                        <div style={{ marginBottom:8 }}>
+                          <input type="number" value={bidPrice} onChange={e => setBidPrice(e.target.value)} placeholder="Votre prix (€)"
+                            style={{ width:"100%", padding:"8px 12px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:8, color:"#e2e8f0", fontSize:14, outline:"none" }} />
+                        </div>
+                        <div style={{ marginBottom:8 }}>
+                          <input type="text" value={bidMessage} onChange={e => setBidMessage(e.target.value)} placeholder="Message (optionnel)"
+                            style={{ width:"100%", padding:"8px 12px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:8, color:"#e2e8f0", fontSize:13, outline:"none" }} />
+                        </div>
+                        {bidError && <div style={{ fontSize:12, color:"#f87171", marginBottom:6 }}>{bidError}</div>}
+                        {bidResult && <div style={{ fontSize:12, color:"#22c55e", marginBottom:6 }}>✅ {bidResult}</div>}
+                        <div style={{ display:"flex", gap:6 }}>
+                          <Btn variant="success" size="sm" disabled={bidLoading} onClick={() => submitBid(m.id)}>{bidLoading ? "..." : "Envoyer"}</Btn>
+                          <Btn variant="ghost" size="sm" onClick={() => { setBidMission(null); setBidError(""); setBidResult(""); }}>Annuler</Btn>
+                        </div>
+                      </div>
+                    ) : (
+                      <Btn size="sm" onClick={() => { setBidMission(m.id); setBidPrice(""); setBidMessage(""); setBidError(""); setBidResult(""); }}>💰 Faire une offre</Btn>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ═══ SIMPLE LIST PAGES ═══
 const MyBidsPage = ({ api }) => { const [bids, setBids] = useState([]); const [l, sL] = useState(true); useEffect(() => { api("/bids/mine").then(d => setBids(Array.isArray(d)?d:d.bids||[])).catch(console.error).finally(() => sL(false)); }, [api]); if(l) return <Spinner />; return (<div><h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Mes offres</h1>{bids.map(b => (<Card key={b.id} style={{ marginBottom:8 }}><div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}><div><Badge status={b.status} />{b.mission && <span style={{ fontSize:14, fontWeight:600, marginLeft:8 }}>{b.mission.pickupCity} → {b.mission.deliveryCity}</span>}</div><div style={{ fontSize:22, fontWeight:800, color:b.status==="ACCEPTED"?"#22c55e":"#e2e8f0" }}>{fmt(b.priceCents)}</div></div></Card>))}{bids.length===0 && <Card><div style={{ textAlign:"center", color:"#64748b", padding:20 }}>Aucune offre</div></Card>}</div>); };
 
@@ -869,6 +980,7 @@ function App() {
   const renderPage = () => {
     switch(page) {
       case "dashboard": return <Dashboard api={auth.api} user={auth.user} />;
+      case "freight-exchange": return <FreightExchangePage api={auth.api} user={auth.user} setPage={setPage} setSelectedMission={setSelectedMission} />;
       case "missions": return <MissionsPage api={auth.api} user={auth.user} setPage={setPage} setSelectedMission={setSelectedMission} />;
       case "mission-detail": return <MissionDetail api={auth.api} user={auth.user} missionId={selectedMission} setPage={setPage} />;
       case "new-mission": return <NewMissionPage api={auth.api} setPage={setPage} />;

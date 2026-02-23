@@ -44,6 +44,19 @@ router.post('/register', authLimiter, validate(schemas.registerSchema), async (r
         data: { userId: user.id, action: 'auth.register', entity: 'User', entityId: user.id, details: { role } },
       });
 
+      // Notifier tous les admins d'une nouvelle inscription
+      const admins = await tx.user.findMany({ where: { role: { in: ['ADMIN', 'SUPER_ADMIN'] }, deletedAt: null } });
+      for (const admin of admins) {
+        await tx.notification.create({
+          data: {
+            userId: admin.id, type: 'NEW_REGISTRATION',
+            title: `Nouvelle inscription : ${firstName} ${lastName}`,
+            message: `${firstName} ${lastName} (${role}) s'est inscrit${company ? ` — ${company.name}` : ''}. Vérification requise.`,
+            sentEmail: false, sentPush: true,
+          },
+        });
+      }
+
       return user;
     });
 
