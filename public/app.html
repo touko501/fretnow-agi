@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FRETNOW — Plateforme Digitale de Fret</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚛</text></svg>"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; background: #070d17; color: #e2e8f0; -webkit-font-smoothing: antialiased; }
+    #root { min-height: 100vh; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::selection { background: rgba(249,115,22,0.3); }
+    @keyframes spin { to { transform: rotate(360deg) } }
+  </style>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+const API = window.location.origin + "/api";
+
+// ═══ AUTH HOOK ═══
+const useAuth = () => {
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    try {
+      const t = localStorage.getItem("fn_token");
+      const u = localStorage.getItem("fn_user");
+      if (t && u) { setToken(t); setUser(JSON.parse(u)); }
+    } catch (e) {}
+    setLoading(false);
+  }, []);
+
+  const login = async (email, password) => {
+    const res = await fetch(`${API}/auth/login`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Erreur de connexion");
+    setUser(data.user); setToken(data.accessToken);
+    try { localStorage.setItem("fn_token", data.accessToken); localStorage.setItem("fn_user", JSON.stringify(data.user)); } catch (e) {}
+    return data;
+  };
+
+  const register = async (formData) => {
+    const res = await fetch(`${API}/auth/register`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || data.details?.map(d => d.message).join(", ") || "Erreur d'inscription");
+    setUser(data.user); setToken(data.accessToken);
+    try { localStorage.setItem("fn_token", data.accessToken); localStorage.setItem("fn_user", JSON.stringify(data.user)); } catch (e) {}
+    return data;
+  };
+
+  const logout = () => {
+    setUser(null); setToken(null);
+    try { localStorage.removeItem("fn_token"); localStorage.removeItem("fn_user"); } catch (e) {}
+  };
+
+  const api = useCallback(async (path, opts = {}) => {
+    const res = await fetch(`${API}${path}`, {
+      ...opts,
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...opts.headers },
+    });
+    const data = await res.json();
+    if (res.status === 401) { logout(); throw new Error("Session expirée"); }
+    if (!res.ok) throw new Error(data.error || "Erreur serveur");
+    return data;
+  }, [token]);
+
+  return { user, token, login, register, logout, api, loading };
+};
+
+// ═══ UTILS ═══
+const fmt = (c) => c != null ? (c / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" }) : "—";
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+const fmtDateTime = (d) => d ? new Date(d).toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
+
+const statusColors = { DRAFT:"#374151", PUBLISHED:"#1e3a5f", BIDDING:"#4c1d95", ASSIGNED:"#713f12", ACCEPTED:"#164e63", PICKUP:"#7c2d12", IN_TRANSIT:"#14532d", DELIVERED:"#064e3b", COMPLETED:"#052e16", CANCELLED:"#450a0a", DISPUTED:"#78350f", PENDING:"#1e3a5f", EXPIRED:"#374151", REJECTED:"#450a0a", WITHDRAWN:"#374151" };
+const statusTextColors = { DRAFT:"#d1d5db", PUBLISHED:"#60a5fa", BIDDING:"#c4b5fd", ASSIGNED:"#fbbf24", ACCEPTED:"#22d3ee", PICKUP:"#fb923c", IN_TRANSIT:"#4ade80", DELIVERED:"#34d399", COMPLETED:"#22c55e", CANCELLED:"#f87171", DISPUTED:"#f59e0b", PENDING:"#93c5fd", EXPIRED:"#9ca3af", REJECTED:"#fca5a5", WITHDRAWN:"#6b7280" };
+const statusLabels = { DRAFT:"Brouillon", PUBLISHED:"Publiée", BIDDING:"Enchères", ASSIGNED:"Attribuée", ACCEPTED:"Acceptée", PICKUP:"Enlèvement", IN_TRANSIT:"En route", DELIVERED:"Livrée", COMPLETED:"Terminée", CANCELLED:"Annulée", DISPUTED:"Litige", PENDING:"En attente", EXPIRED:"Expirée", REJECTED:"Refusée", WITHDRAWN:"Retirée" };
+const vehicleLabels = { FOURGON_3T5:"Fourgon 3.5T", FOURGON_12M3:"Fourgon 12m³", FOURGON_20M3:"Fourgon 20m³", PORTEUR_7T5:"Porteur 7.5T", PORTEUR_12T:"Porteur 12T", PORTEUR_19T:"Porteur 19T", SEMI_TAUTLINER:"Semi tautliner", SEMI_FRIGO:"Semi frigo", SEMI_BACHE:"Semi bâché", SEMI_BENNE:"Semi benne", SEMI_CITERNE:"Semi citerne", SEMI_PLATEAU:"Semi plateau", SEMI_PORTE_CONTENEUR:"Porte-conteneur", MEGA_TRAILER:"Méga trailer" };
+const txLabels = { TOPUP:"Rechargement", RESERVE:"Réservation", RELEASE:"Libération", PAYMENT:"Paiement", COMMISSION:"Commission", REFUND:"Remboursement", WITHDRAWAL:"Retrait" };
+const txColors = { TOPUP:"#22c55e", RESERVE:"#f59e0b", RELEASE:"#60a5fa", PAYMENT:"#f87171", COMMISSION:"#a78bfa", REFUND:"#34d399", WITHDRAWAL:"#fb923c" };
+
+// ═══ UI COMPONENTS ═══
+const Badge = ({ status }) => (
+  <span style={{ display:"inline-block", padding:"3px 10px", borderRadius:6, fontSize:11, fontWeight:700, letterSpacing:"0.05em", background:statusColors[status]||"#374151", color:statusTextColors[status]||"#9ca3af", textTransform:"uppercase" }}>
+    {statusLabels[status]||status}
+  </span>
+);
+
+const Card = ({ children, style, onClick }) => (
+  <div onClick={onClick} style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:14, padding:20, cursor:onClick?"pointer":"default", transition:"all 0.2s", ...style }}
+    onMouseEnter={e => { if(onClick){e.currentTarget.style.background="rgba(255,255,255,0.07)";e.currentTarget.style.borderColor="rgba(255,255,255,0.15)"}}}
+    onMouseLeave={e => { if(onClick){e.currentTarget.style.background="rgba(255,255,255,0.04)";e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"}}}
+  >{children}</div>
+);
+
+const StatCard = ({ icon, label, value, accent }) => (
+  <div style={{ background:`linear-gradient(135deg, ${accent}15, ${accent}08)`, border:`1px solid ${accent}30`, borderRadius:14, padding:"18px 20px", minWidth:140 }}>
+    <div style={{ fontSize:24, marginBottom:4 }}>{icon}</div>
+    <div style={{ fontSize:26, fontWeight:800, color:accent }}>{value}</div>
+    <div style={{ fontSize:12, color:"#94a3b8", marginTop:2 }}>{label}</div>
+  </div>
+);
+
+const Btn = ({ children, onClick, variant="primary", disabled, style, size="md" }) => {
+  const styles = { primary:{background:"linear-gradient(135deg,#f97316,#ea580c)",color:"#fff",border:"none"}, secondary:{background:"rgba(255,255,255,0.06)",color:"#e2e8f0",border:"1px solid rgba(255,255,255,0.12)"}, danger:{background:"rgba(239,68,68,0.15)",color:"#f87171",border:"1px solid rgba(239,68,68,0.3)"}, ghost:{background:"transparent",color:"#94a3b8",border:"1px solid transparent"}, success:{background:"linear-gradient(135deg,#22c55e,#16a34a)",color:"#fff",border:"none"} };
+  const sizes = { sm:{padding:"6px 14px",fontSize:12}, md:{padding:"10px 20px",fontSize:13}, lg:{padding:"14px 28px",fontSize:15} };
+  return <button onClick={onClick} disabled={disabled} style={{ ...styles[variant],...sizes[size], borderRadius:10, fontWeight:600, cursor:disabled?"not-allowed":"pointer", opacity:disabled?0.5:1, transition:"all 0.2s", fontFamily:"inherit", ...style }}>{children}</button>;
+};
+
+const Input = ({ label, ...props }) => (
+  <div style={{ marginBottom:16 }}>
+    {label && <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#94a3b8", marginBottom:6, textTransform:"uppercase", letterSpacing:"0.05em" }}>{label}</label>}
+    <input {...props} style={{ width:"100%", padding:"12px 16px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:10, color:"#e2e8f0", fontSize:14, fontFamily:"inherit", outline:"none", boxSizing:"border-box", ...props.style }}
+      onFocus={e => e.target.style.borderColor="#f97316"} onBlur={e => e.target.style.borderColor="rgba(255,255,255,0.12)"} />
+  </div>
+);
+
+const Select = ({ label, options, ...props }) => (
+  <div style={{ marginBottom:16 }}>
+    {label && <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#94a3b8", marginBottom:6, textTransform:"uppercase", letterSpacing:"0.05em" }}>{label}</label>}
+    <select {...props} style={{ width:"100%", padding:"12px 16px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:10, color:"#e2e8f0", fontSize:14 }}>
+      {options.map(o => <option key={o.value} value={o.value} style={{ background:"#1a1a2e" }}>{o.label}</option>)}
+    </select>
+  </div>
+);
+
+const Spinner = () => <div style={{ display:"flex", justifyContent:"center", padding:60 }}><div style={{ width:36, height:36, border:"3px solid rgba(255,255,255,0.1)", borderTopColor:"#f97316", borderRadius:"50%", animation:"spin 0.8s linear infinite" }}/></div>;
+const ErrorMsg = ({ msg }) => msg ? <div style={{ background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)", color:"#f87171", padding:"10px 14px", borderRadius:10, fontSize:13, marginBottom:16 }}>{msg}</div> : null;
+const SuccessMsg = ({ msg }) => msg ? <div style={{ background:"rgba(34,197,94,0.1)", border:"1px solid rgba(34,197,94,0.3)", color:"#22c55e", padding:"10px 14px", borderRadius:10, fontSize:13, marginBottom:16 }}>{msg}</div> : null;
+
+// ═══ LOGIN PAGE ═══
+const LoginPage = ({ onLogin, onShowRegister }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => { setError(""); setLoading(true); try { await onLogin(email, password); } catch(e) { setError(e.message); } setLoading(false); };
+
+  return (
+    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"radial-gradient(ellipse at 30% 20%, #0c1929 0%, #070d17 50%, #040810 100%)" }}>
+      <div style={{ width:420, maxWidth:"90vw" }}>
+        <div style={{ textAlign:"center", marginBottom:48 }}>
+          <div style={{ fontSize:42, fontWeight:900, letterSpacing:"-0.03em" }}>
+            <span style={{ color:"#f97316" }}>FRET</span><span style={{ color:"#e2e8f0" }}>NOW</span>
+          </div>
+          <div style={{ fontSize:13, color:"#64748b", marginTop:6, letterSpacing:"0.15em", textTransform:"uppercase" }}>Plateforme digitale de fret</div>
+        </div>
+        <Card style={{ padding:32, background:"rgba(255,255,255,0.03)", backdropFilter:"blur(20px)" }}>
+          <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="votre@email.com" onKeyDown={e => e.key==="Enter" && submit()} />
+          <Input label="Mot de passe" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" onKeyDown={e => e.key==="Enter" && submit()} />
+          <ErrorMsg msg={error} />
+          <Btn onClick={submit} disabled={loading||!email||!password} size="lg" style={{ width:"100%" }}>{loading ? "Connexion..." : "Se connecter"}</Btn>
+        </Card>
+        <div style={{ textAlign:"center", marginTop:20 }}>
+          <span style={{ fontSize:13, color:"#64748b" }}>Pas encore de compte ? </span>
+          <span onClick={onShowRegister} style={{ fontSize:13, color:"#f97316", cursor:"pointer", fontWeight:600 }}>Créer un compte</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ═══ REGISTER PAGE ═══
+const RegisterPage = ({ onRegister, onShowLogin }) => {
+  const [step, setStep] = useState(1);
+  const [form, setForm] = useState({ email:"", password:"", passwordConfirm:"", firstName:"", lastName:"", phone:"", role:"TRANSPORTEUR", companyName:"", siren:"", siret:"", address:"", postalCode:"", city:"" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sirenInfo, setSirenInfo] = useState(null);
+
+  const u = (k,v) => setForm(f => ({...f, [k]:v}));
+
+  const lookupSiren = async () => {
+    if (form.siren.length !== 9) return;
+    try {
+      const res = await fetch(`https://api.insee.fr/entreprises/sirene/V3.11/siren/${form.siren}`, { headers: { Authorization: "Bearer votre_token" } });
+      if (res.ok) { const d = await res.json(); setSirenInfo(d); }
+    } catch (e) {}
+  };
+
+  const submit = async () => {
+    setError(""); 
+    if (form.password !== form.passwordConfirm) return setError("Les mots de passe ne correspondent pas");
+    if (form.password.length < 8) return setError("Minimum 8 caractères pour le mot de passe");
+    setLoading(true);
+    try {
+      const data = {
+        email: form.email, password: form.password, firstName: form.firstName, lastName: form.lastName,
+        phone: form.phone || undefined, role: form.role,
+        company: form.companyName ? {
+          name: form.companyName, siren: form.siren, siret: form.siret,
+          address: form.address, postalCode: form.postalCode, city: form.city,
+        } : undefined,
+      };
+      await onRegister(data);
+    } catch(e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"radial-gradient(ellipse at 30% 20%, #0c1929 0%, #070d17 50%, #040810 100%)", padding:"40px 0" }}>
+      <div style={{ width:520, maxWidth:"90vw" }}>
+        <div style={{ textAlign:"center", marginBottom:32 }}>
+          <div style={{ fontSize:36, fontWeight:900 }}><span style={{ color:"#f97316" }}>FRET</span><span style={{ color:"#e2e8f0" }}>NOW</span></div>
+          <div style={{ fontSize:13, color:"#64748b", marginTop:4 }}>Inscription — Étape {step}/2</div>
+        </div>
+
+        <Card style={{ padding:32, background:"rgba(255,255,255,0.03)" }}>
+          {step === 1 && (<div>
+            <h3 style={{ color:"#f97316", fontSize:16, fontWeight:700, marginBottom:20 }}>Vos informations</h3>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              <Input label="Prénom" value={form.firstName} onChange={e => u("firstName",e.target.value)} placeholder="Votre prénom" />
+              <Input label="Nom" value={form.lastName} onChange={e => u("lastName",e.target.value)} placeholder="Votre nom" />
+            </div>
+            <Input label="Email professionnel" type="email" value={form.email} onChange={e => u("email",e.target.value)} placeholder="votre@entreprise.com" />
+            <Input label="Téléphone" type="tel" value={form.phone} onChange={e => u("phone",e.target.value)} placeholder="+33612345678" />
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              <Input label="Mot de passe" type="password" value={form.password} onChange={e => u("password",e.target.value)} placeholder="Min. 8 caractères" />
+              <Input label="Confirmer" type="password" value={form.passwordConfirm} onChange={e => u("passwordConfirm",e.target.value)} placeholder="Confirmer" />
+            </div>
+            <Select label="Vous êtes" value={form.role} onChange={e => u("role",e.target.value)}
+              options={[{ value:"TRANSPORTEUR", label:"🚛 Transporteur — Je propose mes camions" }, { value:"CHARGEUR", label:"📦 Chargeur / Expéditeur — J'envoie des marchandises" }]} />
+            <ErrorMsg msg={error} />
+            <Btn onClick={() => { if(!form.firstName||!form.lastName||!form.email||!form.password) return setError("Remplissez tous les champs"); if(form.password!==form.passwordConfirm) return setError("Mots de passe différents"); setError(""); setStep(2); }} size="lg" style={{ width:"100%" }}>Continuer</Btn>
+          </div>)}
+
+          {step === 2 && (<div>
+            <h3 style={{ color:"#f97316", fontSize:16, fontWeight:700, marginBottom:20 }}>Votre entreprise</h3>
+            <Input label="Nom de l'entreprise" value={form.companyName} onChange={e => u("companyName",e.target.value)} placeholder="Ex: Express Transport SAS" />
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              <Input label="SIREN (9 chiffres)" value={form.siren} onChange={e => { u("siren",e.target.value.replace(/\D/g,"").slice(0,9)); if(e.target.value.length===9) lookupSiren(); }} placeholder="123456789" />
+              <Input label="SIRET (14 chiffres)" value={form.siret} onChange={e => u("siret",e.target.value.replace(/\D/g,"").slice(0,14))} placeholder="12345678901234" />
+            </div>
+            <Input label="Adresse" value={form.address} onChange={e => u("address",e.target.value)} placeholder="Ex: 15 rue du Commerce" />
+            <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:12 }}>
+              <Input label="Ville" value={form.city} onChange={e => u("city",e.target.value)} placeholder="Paris" />
+              <Input label="Code postal" value={form.postalCode} onChange={e => u("postalCode",e.target.value.replace(/\D/g,"").slice(0,5))} placeholder="75001" />
+            </div>
+            <ErrorMsg msg={error} />
+            <div style={{ display:"flex", gap:12 }}>
+              <Btn variant="secondary" onClick={() => setStep(1)} size="lg" style={{ flex:1 }}>Retour</Btn>
+              <Btn onClick={submit} disabled={loading||!form.companyName||!form.siren||!form.siret||!form.address||!form.city||!form.postalCode} size="lg" style={{ flex:2 }}>
+                {loading ? "Création..." : "Créer mon compte"}
+              </Btn>
+            </div>
+          </div>)}
+        </Card>
+
+        <div style={{ textAlign:"center", marginTop:20 }}>
+          <span style={{ fontSize:13, color:"#64748b" }}>Déjà inscrit ? </span>
+          <span onClick={onShowLogin} style={{ fontSize:13, color:"#f97316", cursor:"pointer", fontWeight:600 }}>Se connecter</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ═══ SIDEBAR ═══
+const Sidebar = ({ user, page, setPage, logout }) => {
+  const isAdmin = ["ADMIN","SUPER_ADMIN"].includes(user.role);
+  const isChargeur = user.role === "CHARGEUR";
+  const isTransporteur = user.role === "TRANSPORTEUR";
+
+  const items = [
+    { key:"dashboard", icon:"📊", label:"Tableau de bord" },
+    { key:"missions", icon:"🚛", label:"Missions" },
+    ...(isChargeur ? [{ key:"new-mission", icon:"➕", label:"Nouvelle mission" }] : []),
+    ...(isTransporteur ? [{ key:"my-bids", icon:"💰", label:"Mes offres" }] : []),
+    ...(isChargeur ? [{ key:"wallet", icon:"💳", label:"Portefeuille" }] : []),
+    ...(isTransporteur ? [{ key:"vehicles", icon:"🚚", label:"Véhicules" }, { key:"drivers", icon:"👷", label:"Conducteurs" }] : []),
+    { key:"notifications", icon:"🔔", label:"Notifications" },
+    ...(isAdmin ? [{ key:"wallet", icon:"💳", label:"Finances" }, { key:"admin-users", icon:"👥", label:"Utilisateurs" }, { key:"admin-companies", icon:"🏢", label:"Entreprises" }] : []),
+  ];
+
+  return (
+    <div style={{ width:240, minHeight:"100vh", background:"rgba(0,0,0,0.3)", borderRight:"1px solid rgba(255,255,255,0.06)", padding:"20px 0", display:"flex", flexDirection:"column", flexShrink:0 }}>
+      <div style={{ padding:"0 20px", marginBottom:32 }}>
+        <div style={{ fontSize:26, fontWeight:900 }}><span style={{ color:"#f97316" }}>FRET</span><span style={{ color:"#e2e8f0" }}>NOW</span></div>
+        <div style={{ fontSize:10, color:"#475569", marginTop:2 }}>v6.0 — Production</div>
+      </div>
+      <nav style={{ flex:1, padding:"0 10px" }}>
+        {items.map(i => (
+          <div key={i.key} onClick={() => setPage(i.key)} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:10, cursor:"pointer", marginBottom:2, fontSize:13, fontWeight:page===i.key?600:400, color:page===i.key?"#f97316":"#94a3b8", background:page===i.key?"rgba(249,115,22,0.1)":"transparent" }}>
+            <span style={{ fontSize:16 }}>{i.icon}</span>{i.label}
+          </div>
+        ))}
+      </nav>
+      <div style={{ padding:"16px 20px", borderTop:"1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ fontSize:13, fontWeight:600, color:"#e2e8f0" }}>{user.firstName} {user.lastName}</div>
+        <div style={{ fontSize:11, color:"#64748b", marginBottom:10 }}>{user.role}</div>
+        <Btn variant="ghost" size="sm" onClick={logout} style={{ width:"100%" }}>Déconnexion</Btn>
+      </div>
+    </div>
+  );
+};
+
+// ═══ WALLET PAGE ═══
+const WalletPage = ({ api, user }) => {
+  const [wallet, setWallet] = useState(null);
+  const [txs, setTxs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [topupAmount, setTopupAmount] = useState("");
+  const [topupLoading, setTopupLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  const loadWallet = async () => {
+    try {
+      const [b, t] = await Promise.all([api("/wallet/balance"), api("/wallet/transactions")]);
+      setWallet(b); setTxs(t.transactions || []);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
+
+  useEffect(() => { loadWallet(); }, [api]);
+
+  const doTopup = async () => {
+    const cents = Math.round(parseFloat(topupAmount) * 100);
+    if (!cents || cents < 1000) return setErr("Minimum 10€");
+    setTopupLoading(true); setErr(""); setMsg("");
+    try {
+      const r = await api("/wallet/topup", { method:"POST", body:JSON.stringify({ amountCents:cents }) });
+      setMsg(r.message || "Wallet rechargé !"); setTopupAmount("");
+      loadWallet();
+    } catch(e) { setErr(e.message); }
+    setTopupLoading(false);
+  };
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div>
+      <h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>💳 Portefeuille</h1>
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:14, marginBottom:32 }}>
+        <StatCard icon="💰" label="Solde disponible" value={fmt(wallet?.availableCents || 0)} accent="#22c55e" />
+        <StatCard icon="🔒" label="Réservé (escrow)" value={fmt(wallet?.reservedCents || 0)} accent="#f59e0b" />
+        <StatCard icon="📊" label="Solde total" value={fmt(wallet?.balanceCents || 0)} accent="#60a5fa" />
+      </div>
+
+      <Card style={{ marginBottom:24 }}>
+        <h3 style={{ fontSize:16, fontWeight:700, color:"#e2e8f0", marginBottom:16 }}>Recharger le portefeuille</h3>
+        <div style={{ display:"flex", gap:12, alignItems:"flex-end" }}>
+          <div style={{ flex:1 }}>
+            <Input label="Montant (€)" type="number" min="10" step="10" value={topupAmount} onChange={e => setTopupAmount(e.target.value)} placeholder="Ex: 500" />
+          </div>
+          <Btn onClick={doTopup} disabled={topupLoading} style={{ marginBottom:16, height:46 }} variant="success">
+            {topupLoading ? "..." : "Recharger"}
+          </Btn>
+        </div>
+        <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+          {[100,500,1000,5000].map(v => (
+            <span key={v} onClick={() => setTopupAmount(String(v))} style={{ padding:"4px 12px", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:6, cursor:"pointer", fontSize:12, color:"#94a3b8" }}>{v}€</span>
+          ))}
+        </div>
+        <ErrorMsg msg={err} />
+        <SuccessMsg msg={msg} />
+      </Card>
+
+      <h2 style={{ fontSize:18, fontWeight:700, marginBottom:16 }}>Historique des mouvements</h2>
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {txs.length === 0 ? (
+          <Card><div style={{ textAlign:"center", color:"#64748b", padding:20 }}>Aucune transaction</div></Card>
+        ) : txs.map(tx => (
+          <Card key={tx.id}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div>
+                <span style={{ fontSize:12, fontWeight:700, color:txColors[tx.type]||"#94a3b8", textTransform:"uppercase" }}>{txLabels[tx.type]||tx.type}</span>
+                <div style={{ fontSize:13, color:"#94a3b8", marginTop:2 }}>{tx.description}</div>
+                <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>{fmtDateTime(tx.createdAt)}</div>
+              </div>
+              <div style={{ fontSize:18, fontWeight:800, color:tx.amountCents>0?"#22c55e":"#f87171" }}>
+                {tx.amountCents>0?"+":""}{fmt(tx.amountCents)}
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ═══ DASHBOARD ═══
+const Dashboard = ({ api, user }) => {
+  const [stats, setStats] = useState(null);
+  const [missions, setMissions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const mData = await api("/missions?limit=5");
+        setMissions(mData.missions || []);
+        if (["ADMIN","SUPER_ADMIN"].includes(user.role)) { try { const d = await api("/admin/dashboard"); setStats(d.stats); } catch(e){} }
+      } catch(e) { console.error(e); }
+      setLoading(false);
+    };
+    load();
+  }, [api, user.role]);
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div>
+      <h1 style={{ fontSize:28, fontWeight:800, marginBottom:8 }}>Bienvenue, {user.firstName}</h1>
+      <p style={{ color:"#64748b", marginBottom:32, fontSize:14 }}>
+        {user.role==="CHARGEUR" && "Gérez vos expéditions et suivez vos missions."}
+        {user.role==="TRANSPORTEUR" && "Trouvez des missions et optimisez vos retours à charge."}
+        {["ADMIN","SUPER_ADMIN"].includes(user.role) && "Vue d'ensemble de la plateforme FRETNOW."}
+      </p>
+      {user.status === "PENDING_VERIFICATION" && (
+        <Card style={{ marginBottom:24, borderLeft:"3px solid #f59e0b" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+            <span style={{ fontSize:24 }}>⏳</span>
+            <div>
+              <div style={{ fontWeight:700, color:"#fbbf24" }}>Compte en attente de vérification</div>
+              <div style={{ fontSize:13, color:"#94a3b8" }}>Notre équipe vérifie vos documents. Vous serez notifié dès validation.</div>
+            </div>
+          </div>
+        </Card>
+      )}
+      {stats && (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))", gap:14, marginBottom:32 }}>
+          <StatCard icon="👥" label="Utilisateurs" value={stats.totalUsers} accent="#60a5fa" />
+          <StatCard icon="🏢" label="Entreprises" value={stats.totalCompanies} accent="#a78bfa" />
+          <StatCard icon="🚛" label="Missions" value={stats.totalMissions} accent="#f97316" />
+          <StatCard icon="📋" label="Actives" value={stats.activeMissions} accent="#fbbf24" />
+          <StatCard icon="⏳" label="En attente" value={stats.pendingVerifications} accent="#22d3ee" />
+          <StatCard icon="💰" label="CA mois" value={`${stats.monthlyRevenueEur||0}€`} accent="#22c55e" />
+        </div>
+      )}
+      <h2 style={{ fontSize:18, fontWeight:700, marginBottom:16 }}>{missions.length > 0 ? "Dernières missions" : "Aucune mission"}</h2>
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        {missions.map(m => (
+          <Card key={m.id}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+              <div>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}><Badge status={m.status} /><span style={{ fontSize:12, color:"#64748b" }}>{m.reference}</span></div>
+                <div style={{ fontSize:16, fontWeight:700 }}>{m.pickupCity} → {m.deliveryCity}</div>
+                <div style={{ fontSize:13, color:"#94a3b8" }}>{m.goodsDescription||"—"} {m.weightKg?`• ${(m.weightKg/1000).toFixed(1)}t`:""}</div>
+              </div>
+              <div style={{ textAlign:"right" }}>{m.budgetMaxCents && <div style={{ fontSize:18, fontWeight:700, color:"#fbbf24" }}>{fmt(m.finalPriceCents||m.budgetMaxCents)}</div>}</div>
+            </div>
+          </Card>
+        ))}
+        {missions.length === 0 && <Card><div style={{ textAlign:"center", color:"#64748b", padding:20 }}>Aucune mission pour le moment. {user.role==="CHARGEUR"?"Créez votre première mission !":"Les missions apparaîtront ici."}</div></Card>}
+      </div>
+    </div>
+  );
+};
+
+// ═══ MISSIONS LIST ═══
+const MissionsPage = ({ api, user, setPage, setSelectedMission }) => {
+  const [missions, setMissions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("");
+
+  useEffect(() => {
+    api(`/missions?limit=50${filter?`&status=${filter}`:""}`)
+      .then(d => setMissions(d.missions||[]))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [api, filter]);
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+        <h1 style={{ fontSize:24, fontWeight:800 }}>Missions</h1>
+        {user.role==="CHARGEUR" && <Btn onClick={() => setPage("new-mission")}>+ Nouvelle mission</Btn>}
+      </div>
+      <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
+        {["","PUBLISHED","BIDDING","IN_TRANSIT","COMPLETED","ASSIGNED"].map(s => (
+          <Btn key={s} variant={filter===s?"primary":"secondary"} size="sm" onClick={() => { setFilter(s); setLoading(true); }}>
+            {s ? statusLabels[s]||s : "Toutes"}
+          </Btn>
+        ))}
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        {missions.map(m => (
+          <Card key={m.id} onClick={() => { setSelectedMission(m.id); setPage("mission-detail"); }}>
+            <div style={{ display:"flex", justifyContent:"space-between" }}>
+              <div style={{ flex:1 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}><Badge status={m.status} /><span style={{ fontSize:12, color:"#64748b", fontFamily:"monospace" }}>{m.reference}</span></div>
+                <div style={{ fontSize:16, fontWeight:700 }}>{m.pickupCity} → {m.deliveryCity}</div>
+                <div style={{ fontSize:13, color:"#94a3b8", marginTop:4 }}>{m.goodsDescription} {m.weightKg?`• ${(m.weightKg/1000).toFixed(1)}t`:""} {m.palletCount?`• ${m.palletCount} pal.`:""}</div>
+                <div style={{ display:"flex", gap:16, marginTop:6, fontSize:12, color:"#64748b" }}>
+                  <span>{fmtDate(m.pickupDateRequested)}</span>{m.distanceKm && <span>{m.distanceKm} km</span>}{m._count?.bids>0 && <span>{m._count.bids} offres</span>}
+                </div>
+              </div>
+              <div style={{ textAlign:"right", marginLeft:16 }}><div style={{ fontSize:20, fontWeight:800, color:m.finalPriceCents?"#22c55e":"#fbbf24" }}>{fmt(m.finalPriceCents||m.budgetMaxCents)}</div></div>
+            </div>
+          </Card>
+        ))}
+        {missions.length===0 && <div style={{ textAlign:"center", color:"#64748b", padding:40 }}>Aucune mission</div>}
+      </div>
+    </div>
+  );
+};
+
+// ═══ MISSION DETAIL (compact) ═══
+const MissionDetail = ({ api, user, missionId, setPage }) => {
+  const [m, setM] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { if(missionId) api(`/missions/${missionId}`).then(setM).catch(console.error).finally(() => setLoading(false)); }, [api, missionId]);
+  if (loading) return <Spinner />;
+  if (!m) return <div style={{ color:"#f87171", padding:40 }}>Mission introuvable</div>;
+
+  return (
+    <div>
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24 }}>
+        <Btn variant="ghost" size="sm" onClick={() => setPage("missions")}>← Retour</Btn>
+        <Badge status={m.status} /><span style={{ fontSize:14, color:"#64748b", fontFamily:"monospace" }}>{m.reference}</span>
+      </div>
+      <h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>{m.pickupCity} → {m.deliveryCity}</h1>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:24 }}>
+        <Card style={{ borderLeft:"3px solid #f97316" }}>
+          <div style={{ fontSize:12, color:"#f97316", fontWeight:700, marginBottom:10, textTransform:"uppercase" }}>Enlèvement</div>
+          <div style={{ fontSize:15, fontWeight:600 }}>{m.pickupAddress}</div>
+          <div style={{ fontSize:13, color:"#94a3b8" }}>{m.pickupPostalCode} {m.pickupCity}</div>
+          <div style={{ fontSize:12, color:"#64748b", marginTop:8 }}>{fmtDateTime(m.pickupDateRequested)}</div>
+        </Card>
+        <Card style={{ borderLeft:"3px solid #22c55e" }}>
+          <div style={{ fontSize:12, color:"#22c55e", fontWeight:700, marginBottom:10, textTransform:"uppercase" }}>Livraison</div>
+          <div style={{ fontSize:15, fontWeight:600 }}>{m.deliveryAddress}</div>
+          <div style={{ fontSize:13, color:"#94a3b8" }}>{m.deliveryPostalCode} {m.deliveryCity}</div>
+          <div style={{ fontSize:12, color:"#64748b", marginTop:8 }}>{fmtDateTime(m.deliveryDateRequested)}</div>
+        </Card>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16, marginBottom:24 }}>
+        <Card><div style={{ fontSize:12, color:"#64748b", marginBottom:8 }}>Marchandise</div><div style={{ fontSize:14, fontWeight:600 }}>{m.goodsDescription||"—"}</div><div style={{ fontSize:13, color:"#94a3b8", marginTop:4 }}>{m.weightKg?`${(m.weightKg/1000).toFixed(1)}t `:""}{m.palletCount?`${m.palletCount} pal.`:""}</div></Card>
+        <Card><div style={{ fontSize:12, color:"#64748b", marginBottom:8 }}>Trajet</div><div style={{ fontSize:22, fontWeight:800 }}>{m.distanceKm?`${m.distanceKm} km`:"—"}</div></Card>
+        <Card><div style={{ fontSize:12, color:"#64748b", marginBottom:8 }}>Prix</div><div style={{ fontSize:22, fontWeight:800, color:m.finalPriceCents?"#22c55e":"#fbbf24" }}>{fmt(m.finalPriceCents||m.budgetMaxCents)}</div><div style={{ fontSize:12, color:"#64748b", marginTop:4 }}>Commission: {m.commissionPercent}%</div></Card>
+      </div>
+      {m.bids && m.bids.length>0 && (<div style={{ marginBottom:24 }}><h2 style={{ fontSize:18, fontWeight:700, marginBottom:12 }}>Offres ({m.bids.length})</h2>{m.bids.map(b => (
+        <Card key={b.id} style={{ marginBottom:8 }}><div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}><div><Badge status={b.status} /> <span style={{ fontSize:14, fontWeight:600, marginLeft:8 }}>{b.transporteur?.firstName} {b.transporteur?.lastName}</span>{b.message && <div style={{ fontSize:12, color:"#94a3b8", marginTop:4 }}>"{b.message}"</div>}</div><div style={{ fontSize:22, fontWeight:800, color:b.status==="ACCEPTED"?"#22c55e":"#e2e8f0" }}>{fmt(b.priceCents)}</div></div></Card>
+      ))}</div>)}
+    </div>
+  );
+};
+
+// ═══ NEW MISSION ═══
+const NewMissionPage = ({ api, setPage }) => {
+  const [form, setForm] = useState({ pickupAddress:"", pickupCity:"", pickupPostalCode:"", deliveryAddress:"", deliveryCity:"", deliveryPostalCode:"", goodsDescription:"", weightKg:"", palletCount:"", vehicleTypeRequired:"SEMI_TAUTLINER", budgetMaxCents:"", pickupDateRequested:"", deliveryDateRequested:"" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const u = (k,v) => setForm(f => ({...f,[k]:v}));
+
+  const submit = async () => {
+    setSaving(true); setError("");
+    try {
+      await api("/missions", { method:"POST", body:JSON.stringify({ ...form, weightKg:form.weightKg?Number(form.weightKg):undefined, palletCount:form.palletCount?Number(form.palletCount):undefined, budgetMaxCents:form.budgetMaxCents?Number(form.budgetMaxCents)*100:undefined }) });
+      setPage("missions");
+    } catch(e) { setError(e.message); }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ maxWidth:700 }}>
+      <h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Nouvelle mission</h1>
+      <Card style={{ marginBottom:20 }}>
+        <h3 style={{ color:"#f97316", fontSize:14, fontWeight:700, marginBottom:14 }}>Enlèvement</h3>
+        <Input label="Adresse" value={form.pickupAddress} onChange={e => u("pickupAddress",e.target.value)} />
+        <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:12 }}><Input label="Ville" value={form.pickupCity} onChange={e => u("pickupCity",e.target.value)} /><Input label="Code postal" value={form.pickupPostalCode} onChange={e => u("pickupPostalCode",e.target.value)} /></div>
+        <Input label="Date souhaitée" type="datetime-local" value={form.pickupDateRequested} onChange={e => u("pickupDateRequested",e.target.value)} />
+      </Card>
+      <Card style={{ marginBottom:20 }}>
+        <h3 style={{ color:"#22c55e", fontSize:14, fontWeight:700, marginBottom:14 }}>Livraison</h3>
+        <Input label="Adresse" value={form.deliveryAddress} onChange={e => u("deliveryAddress",e.target.value)} />
+        <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:12 }}><Input label="Ville" value={form.deliveryCity} onChange={e => u("deliveryCity",e.target.value)} /><Input label="Code postal" value={form.deliveryPostalCode} onChange={e => u("deliveryPostalCode",e.target.value)} /></div>
+        <Input label="Date souhaitée" type="datetime-local" value={form.deliveryDateRequested} onChange={e => u("deliveryDateRequested",e.target.value)} />
+      </Card>
+      <Card style={{ marginBottom:20 }}>
+        <h3 style={{ color:"#60a5fa", fontSize:14, fontWeight:700, marginBottom:14 }}>Marchandise</h3>
+        <Input label="Description" value={form.goodsDescription} onChange={e => u("goodsDescription",e.target.value)} placeholder="Ex: 18 palettes produits alimentaires" />
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
+          <Input label="Poids (kg)" type="number" value={form.weightKg} onChange={e => u("weightKg",e.target.value)} />
+          <Input label="Palettes" type="number" value={form.palletCount} onChange={e => u("palletCount",e.target.value)} />
+          <Input label="Budget max (€)" type="number" value={form.budgetMaxCents} onChange={e => u("budgetMaxCents",e.target.value)} />
+        </div>
+        <Select label="Type de véhicule" value={form.vehicleTypeRequired} onChange={e => u("vehicleTypeRequired",e.target.value)} options={Object.entries(vehicleLabels).map(([k,v]) => ({ value:k, label:v }))} />
+      </Card>
+      <ErrorMsg msg={error} />
+      <div style={{ display:"flex", gap:12 }}><Btn variant="secondary" onClick={() => setPage("missions")}>Annuler</Btn><Btn onClick={submit} disabled={saving||!form.pickupCity||!form.deliveryCity}>{saving?"Création...":"Créer la mission"}</Btn></div>
+    </div>
+  );
+};
+
+// ═══ SIMPLE LIST PAGES ═══
+const MyBidsPage = ({ api }) => { const [bids, setBids] = useState([]); const [l, sL] = useState(true); useEffect(() => { api("/bids/mine").then(d => setBids(Array.isArray(d)?d:d.bids||[])).catch(console.error).finally(() => sL(false)); }, [api]); if(l) return <Spinner />; return (<div><h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Mes offres</h1>{bids.map(b => (<Card key={b.id} style={{ marginBottom:8 }}><div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}><div><Badge status={b.status} />{b.mission && <span style={{ fontSize:14, fontWeight:600, marginLeft:8 }}>{b.mission.pickupCity} → {b.mission.deliveryCity}</span>}</div><div style={{ fontSize:22, fontWeight:800, color:b.status==="ACCEPTED"?"#22c55e":"#e2e8f0" }}>{fmt(b.priceCents)}</div></div></Card>))}{bids.length===0 && <Card><div style={{ textAlign:"center", color:"#64748b", padding:20 }}>Aucune offre</div></Card>}</div>); };
+
+const VehiclesPage = ({ api }) => { const [v, sV] = useState([]); const [l, sL] = useState(true); useEffect(() => { api("/vehicles").then(d => sV(Array.isArray(d)?d:d.vehicles||[])).catch(console.error).finally(() => sL(false)); }, [api]); if(l) return <Spinner />; return (<div><h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Véhicules</h1><div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px, 1fr))", gap:14 }}>{v.map(v => (<Card key={v.id}><div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}><div><div style={{ fontSize:15, fontWeight:700 }}>{v.brand} {v.model}</div><div style={{ fontSize:12, color:"#64748b" }}>{vehicleLabels[v.type]||v.type}</div></div><div style={{ padding:"4px 10px", borderRadius:6, fontSize:12, fontWeight:700, fontFamily:"monospace", background:"rgba(249,115,22,0.1)", color:"#f97316" }}>{v.licensePlate}</div></div><div style={{ fontSize:12, color:"#94a3b8" }}>{(v.capacityKg/1000).toFixed(1)}t {v.volumeM3?`• ${v.volumeM3}m³`:""} {v.palletSpots?`• ${v.palletSpots} pal.`:""}</div></Card>))}{v.length===0 && <div style={{ color:"#64748b", padding:40, textAlign:"center" }}>Aucun véhicule</div>}</div></div>); };
+
+const DriversPage = ({ api }) => { const [d, sD] = useState([]); const [l, sL] = useState(true); useEffect(() => { api("/drivers").then(d => sD(Array.isArray(d)?d:d.drivers||[])).catch(console.error).finally(() => sL(false)); }, [api]); if(l) return <Spinner />; return (<div><h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Conducteurs</h1><div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(300px, 1fr))", gap:14 }}>{d.map(d => (<Card key={d.id}><div style={{ display:"flex", alignItems:"center", gap:12 }}><div style={{ width:44, height:44, borderRadius:"50%", background:"linear-gradient(135deg,#f97316,#ea580c)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:800, color:"#fff" }}>{d.firstName?.[0]}{d.lastName?.[0]}</div><div><div style={{ fontSize:15, fontWeight:700 }}>{d.firstName} {d.lastName}</div><div style={{ fontSize:12, color:"#94a3b8" }}>{d.phone}</div></div></div></Card>))}{d.length===0 && <div style={{ color:"#64748b", padding:40, textAlign:"center" }}>Aucun conducteur</div>}</div></div>); };
+
+const NotificationsPage = ({ api }) => { const [n, sN] = useState([]); const [l, sL] = useState(true); useEffect(() => { api("/notifications").then(d => sN(Array.isArray(d)?d:d.notifications||[])).catch(console.error).finally(() => sL(false)); }, [api]); if(l) return <Spinner />; return (<div><h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Notifications</h1>{n.map(n => (<Card key={n.id} style={{ marginBottom:8, opacity:n.isRead?0.6:1 }}><div style={{ display:"flex", alignItems:"flex-start", gap:12 }}><div style={{ fontSize:20 }}>{n.type?.includes("PAYMENT")?"💰":n.type?.includes("BID")?"💬":"🔔"}</div><div style={{ flex:1 }}><div style={{ fontSize:14, fontWeight:600 }}>{n.title}</div><div style={{ fontSize:13, color:"#94a3b8", marginTop:2 }}>{n.message}</div><div style={{ fontSize:11, color:"#64748b", marginTop:4 }}>{fmtDateTime(n.createdAt)}</div></div></div></Card>))}{n.length===0 && <Card><div style={{ textAlign:"center", color:"#64748b", padding:20 }}>Aucune notification</div></Card>}</div>); };
+
+const AdminUsersPage = ({ api }) => { const [d, sD] = useState({ users:[] }); const [l, sL] = useState(true); useEffect(() => { api("/admin/users").then(sD).catch(console.error).finally(() => sL(false)); }, [api]); if(l) return <Spinner />; const roleIcons = { SUPER_ADMIN:"🔴", ADMIN:"🟠", TRANSPORTEUR:"🔵", CHARGEUR:"🟢" }; return (<div><h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Utilisateurs ({d.pagination?.total||d.users?.length})</h1><div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse" }}><thead><tr style={{ borderBottom:"1px solid rgba(255,255,255,0.08)" }}>{["","Nom","Email","Rôle","Statut","Entreprise"].map(h => <th key={h} style={{ textAlign:"left", padding:"10px 12px", fontSize:11, fontWeight:700, color:"#64748b", textTransform:"uppercase" }}>{h}</th>)}</tr></thead><tbody>{d.users?.map(u => (<tr key={u.id} style={{ borderBottom:"1px solid rgba(255,255,255,0.04)" }}><td style={{ padding:"10px 12px", fontSize:16 }}>{roleIcons[u.role]||"⚪"}</td><td style={{ padding:"10px 12px" }}><div style={{ fontSize:14, fontWeight:600 }}>{u.firstName} {u.lastName}</div></td><td style={{ padding:"10px 12px", fontSize:13, color:"#94a3b8", fontFamily:"monospace" }}>{u.email}</td><td style={{ padding:"10px 12px" }}><Badge status={u.role} /></td><td style={{ padding:"10px 12px" }}><Badge status={u.status} /></td><td style={{ padding:"10px 12px", fontSize:13, color:"#94a3b8" }}>{u.company?.name||"—"}</td></tr>))}</tbody></table></div></div>); };
+
+const AdminCompaniesPage = ({ api }) => { const [c, sC] = useState([]); const [l, sL] = useState(true); useEffect(() => { api("/admin/companies").then(d => sC(Array.isArray(d)?d:[])).catch(console.error).finally(() => sL(false)); }, [api]); if(l) return <Spinner />; const tc = { PLATEFORME:"#a78bfa", TRANSPORTEUR:"#60a5fa", CHARGEUR:"#34d399" }; return (<div><h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Entreprises ({c.length})</h1><div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(340px, 1fr))", gap:14 }}>{c.map(c => (<Card key={c.id}><div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}><div style={{ fontSize:16, fontWeight:700 }}>{c.name}</div><span style={{ fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:6, background:`${tc[c.type]||"#94a3b8"}20`, color:tc[c.type]||"#94a3b8", textTransform:"uppercase" }}>{c.type}</span></div><div style={{ fontSize:12, color:"#94a3b8" }}><div>{c.address}, {c.postalCode} {c.city}</div><div>SIREN: {c.siren}</div></div><div style={{ display:"flex", gap:10, marginTop:10, fontSize:11, color:"#64748b" }}><span>{c._count?.users||0} users</span><span>{c._count?.vehicles||0} véhicules</span>{c.isVerified?<span style={{ color:"#22c55e" }}>✓ Vérifié</span>:<span style={{ color:"#fbbf24" }}>En attente</span>}</div></Card>))}</div></div>); };
+
+// ═══ MAIN APP ═══
+function App() {
+  const auth = useAuth();
+  const [page, setPage] = useState("dashboard");
+  const [selectedMission, setSelectedMission] = useState(null);
+  const [authView, setAuthView] = useState("login");
+
+  if (auth.loading) return <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#070d17" }}><Spinner /></div>;
+
+  if (!auth.user) {
+    if (authView === "register") return <RegisterPage onRegister={auth.register} onShowLogin={() => setAuthView("login")} />;
+    return <LoginPage onLogin={auth.login} onShowRegister={() => setAuthView("register")} />;
+  }
+
+  const renderPage = () => {
+    switch(page) {
+      case "dashboard": return <Dashboard api={auth.api} user={auth.user} />;
+      case "missions": return <MissionsPage api={auth.api} user={auth.user} setPage={setPage} setSelectedMission={setSelectedMission} />;
+      case "mission-detail": return <MissionDetail api={auth.api} user={auth.user} missionId={selectedMission} setPage={setPage} />;
+      case "new-mission": return <NewMissionPage api={auth.api} setPage={setPage} />;
+      case "my-bids": return <MyBidsPage api={auth.api} />;
+      case "wallet": return <WalletPage api={auth.api} user={auth.user} />;
+      case "vehicles": return <VehiclesPage api={auth.api} />;
+      case "drivers": return <DriversPage api={auth.api} />;
+      case "notifications": return <NotificationsPage api={auth.api} />;
+      case "admin-users": return <AdminUsersPage api={auth.api} />;
+      case "admin-companies": return <AdminCompaniesPage api={auth.api} />;
+      default: return <Dashboard api={auth.api} user={auth.user} />;
+    }
+  };
+
+  return (
+    <div style={{ display:"flex", minHeight:"100vh", background:"radial-gradient(ellipse at 30% 20%, #0c1929 0%, #070d17 50%, #040810 100%)" }}>
+      <Sidebar user={auth.user} page={page} setPage={setPage} logout={auth.logout} />
+      <main style={{ flex:1, padding:"32px 40px", maxWidth:1100, overflowY:"auto", maxHeight:"100vh" }}>{renderPage()}</main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+  </script>
+</body>
+</html>

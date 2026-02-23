@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// FRETNOW AGI — API SERVER v5.1
+// FRETNOW AGI — API SERVER v6.1
 // Marketplace Fret Routier B2B · Plateforme Digitale
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -71,7 +71,7 @@ app.use('/api/wallet', walletRoutes);
 app.get('/api', (req, res) => {
   res.json({
     name: 'FRETNOW AGI API',
-    version: '6.0.0',
+    version: '6.1.0',
     status: 'running',
     endpoints: {
       auth: { register: 'POST /api/auth/register', login: 'POST /api/auth/login', me: 'GET /api/auth/me', refresh: 'POST /api/auth/refresh', logout: 'POST /api/auth/logout', password: 'PUT /api/auth/password' },
@@ -96,6 +96,10 @@ app.use('/api/*', (req, res) => {
   res.status(404).json({ error: 'Route non trouvée', path: req.originalUrl });
 });
 
+// ═══ CONVENIENCE REDIRECTS ═══
+app.get('/app', (req, res) => res.redirect('/app.html'));
+app.get('/dashboard', (req, res) => res.redirect('/app.html'));
+
 // ═══ SPA CATCH-ALL ═══
 const indexHtml = path.join(__dirname, '../public/index.html');
 if (fs.existsSync(indexHtml)) {
@@ -114,7 +118,7 @@ app.use((err, req, res, next) => {
 app.listen(env.PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════╗
-║  🚛 FRETNOW AGI API v6.0                         ║
+║  🚛 FRETNOW AGI API v6.1                         ║
 ║  Mode: ${env.NODE_ENV.padEnd(42)}║
 ║  Port: ${String(env.PORT).padEnd(42)}║
 ║  DB: ${(env.DATABASE_URL ? '✅ Connected' : '❌ Missing').padEnd(44)}║
