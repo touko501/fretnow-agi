@@ -192,16 +192,87 @@ const RegisterPage = ({ onRegister, onShowLogin }) => {
   const [form, setForm] = useState({ email:"", password:"", passwordConfirm:"", firstName:"", lastName:"", phone:"", role:"TRANSPORTEUR", companyName:"", siren:"", siret:"", address:"", postalCode:"", city:"" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sirenInfo, setSirenInfo] = useState(null);
+  const [siretStatus, setSiretStatus] = useState("idle"); // idle, loading, valid, invalid, error
+  const [siretCompany, setSiretCompany] = useState(null);
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+  const [showAddrDropdown, setShowAddrDropdown] = useState(false);
+  const siretTimer = useRef(null);
+  const addrTimer = useRef(null);
 
   const u = (k,v) => setForm(f => ({...f, [k]:v}));
 
-  const lookupSiren = async () => {
-    if (form.siren.length !== 9) return;
+  // ── SIRET Auto-lookup via recherche-entreprises.api.gouv.fr ──
+  const lookupSiret = async (siret) => {
+    if (!siret || siret.length < 9) { setSiretStatus("idle"); setSiretCompany(null); return; }
+    setSiretStatus("loading");
     try {
-      const res = await fetch(`https://api.insee.fr/entreprises/sirene/V3.11/siren/${form.siren}`, { headers: { Authorization: "Bearer votre_token" } });
-      if (res.ok) { const d = await res.json(); setSirenInfo(d); }
-    } catch (e) {}
+      const res = await fetch(`https://recherche-entreprises.api.gouv.fr/search?q=${siret}&per_page=1`);
+      const data = await res.json();
+      if (data.results && data.results.length > 0) {
+        const r = data.results[0];
+        const siege = r.siege || {};
+        const nafCode = r.activite_principale || siege.activite_principale || "";
+        const nafMap = { "49.41A":"Transport routier de fret interurbain", "49.41B":"Transport routier de fret de proximité", "49.41C":"Location de camions avec chauffeur", "52.29A":"Messagerie, fret express", "52.29B":"Affrètement et organisation des transports" };
+        const company = {
+          name: r.nom_complet || r.nom_raison_sociale || "",
+          siren: r.siren || "",
+          siret: siege.siret || siret,
+          address: siege.adresse || "",
+          postalCode: siege.code_postal || "",
+          city: siege.libelle_commune || "",
+          activity: nafMap[nafCode] || (nafCode ? `NAF ${nafCode}` : ""),
+          isActive: r.etat_administratif === "A"
+        };
+        setSiretCompany(company);
+        if (!company.isActive) { setSiretStatus("inactive"); return; }
+        setSiretStatus("valid");
+        // Auto-fill fields
+        setForm(f => ({
+          ...f,
+          companyName: company.name || f.companyName,
+          siren: company.siren || f.siren,
+          siret: company.siret || f.siret,
+          address: company.address || f.address,
+          postalCode: company.postalCode || f.postalCode,
+          city: company.city || f.city,
+        }));
+      } else { setSiretStatus("invalid"); setSiretCompany(null); }
+    } catch (e) { setSiretStatus("error"); console.error(e); }
+  };
+
+  const handleSiretChange = (val) => {
+    const clean = val.replace(/\D/g, "").slice(0, 14);
+    u("siret", clean);
+    if (siretTimer.current) clearTimeout(siretTimer.current);
+    siretTimer.current = setTimeout(() => lookupSiret(clean), 500);
+  };
+
+  // ── Address Autocomplete via api-adresse.data.gouv.fr (BAN) ──
+  const handleAddressInput = (val) => {
+    u("address", val);
+    if (addrTimer.current) clearTimeout(addrTimer.current);
+    if (val.length < 3) { setAddressSuggestions([]); setShowAddrDropdown(false); return; }
+    addrTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(val)}&limit=5`);
+        const data = await res.json();
+        if (data.features) {
+          setAddressSuggestions(data.features.map(f => ({
+            label: f.properties.label,
+            street: f.properties.name || "",
+            city: f.properties.city || "",
+            postcode: f.properties.postcode || "",
+          })));
+          setShowAddrDropdown(true);
+        }
+      } catch (e) { console.error(e); }
+    }, 300);
+  };
+
+  const selectAddress = (addr) => {
+    setForm(f => ({ ...f, address: addr.street, city: addr.city, postalCode: addr.postcode }));
+    setShowAddrDropdown(false);
+    setAddressSuggestions([]);
   };
 
   const submit = async () => {
@@ -222,6 +293,8 @@ const RegisterPage = ({ onRegister, onShowLogin }) => {
     } catch(e) { setError(e.message); }
     setLoading(false);
   };
+
+  const siretIcon = { idle:"🏢", loading:"⏳", valid:"✅", invalid:"❌", inactive:"⚠️", error:"⚠️" }[siretStatus];
 
   return (
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"radial-gradient(ellipse at 30% 20%, #0c1929 0%, #070d17 50%, #040810 100%)", padding:"40px 0" }}>
@@ -252,14 +325,53 @@ const RegisterPage = ({ onRegister, onShowLogin }) => {
 
           {step === 2 && (<div>
             <h3 style={{ color:"#f97316", fontSize:16, fontWeight:700, marginBottom:20 }}>Votre entreprise</h3>
-            <Input label="Nom de l'entreprise" value={form.companyName} onChange={e => u("companyName",e.target.value)} placeholder="Ex: Express Transport SAS" />
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-              <Input label="SIREN (9 chiffres)" value={form.siren} onChange={e => { u("siren",e.target.value.replace(/\D/g,"").slice(0,9)); if(e.target.value.length===9) lookupSiren(); }} placeholder="123456789" />
-              <Input label="SIRET (14 chiffres)" value={form.siret} onChange={e => u("siret",e.target.value.replace(/\D/g,"").slice(0,14))} placeholder="12345678901234" />
+
+            {/* SIRET with auto-lookup */}
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#94a3b8", marginBottom:6, textTransform:"uppercase", letterSpacing:"0.05em" }}>SIRET (14 chiffres) {siretIcon}</label>
+              <input type="text" value={form.siret} onChange={e => handleSiretChange(e.target.value)} placeholder="Entrez votre SIRET — remplissage auto"
+                style={{ width:"100%", padding:"12px 16px", background:"rgba(255,255,255,0.05)", border:`1px solid ${siretStatus==="valid"?"#22c55e":siretStatus==="invalid"?"#ef4444":"rgba(255,255,255,0.12)"}`, borderRadius:10, color:"#e2e8f0", fontSize:14, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }} />
+              {siretStatus === "valid" && siretCompany && (
+                <div style={{ marginTop:6, padding:"8px 12px", background:"rgba(34,197,94,0.08)", borderRadius:8, border:"1px solid rgba(34,197,94,0.2)" }}>
+                  <div style={{ fontSize:14, fontWeight:700, color:"#22c55e" }}>✅ {siretCompany.name}</div>
+                  <div style={{ fontSize:12, color:"#94a3b8", marginTop:2 }}>{siretCompany.address} — {siretCompany.postalCode} {siretCompany.city}</div>
+                  {siretCompany.activity && <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>📋 {siretCompany.activity}</div>}
+                </div>
+              )}
+              {siretStatus === "inactive" && siretCompany && (
+                <div style={{ marginTop:6, padding:"8px 12px", background:"rgba(245,158,11,0.08)", borderRadius:8, border:"1px solid rgba(245,158,11,0.2)" }}>
+                  <div style={{ fontSize:13, fontWeight:600, color:"#f59e0b" }}>⚠️ Entreprise inactive : {siretCompany.name}</div>
+                </div>
+              )}
+              {siretStatus === "invalid" && <div style={{ marginTop:4, fontSize:12, color:"#ef4444" }}>❌ Ce SIRET n'existe pas dans la base SIRENE</div>}
+              {siretStatus === "loading" && <div style={{ marginTop:4, fontSize:12, color:"#60a5fa" }}>⏳ Vérification en cours...</div>}
             </div>
-            <Input label="Adresse" value={form.address} onChange={e => u("address",e.target.value)} placeholder="Ex: 15 rue du Commerce" />
+
+            <Input label="Nom de l'entreprise" value={form.companyName} onChange={e => u("companyName",e.target.value)} placeholder="Auto-rempli via SIRET ou saisie manuelle" />
+            <Input label="SIREN" value={form.siren} onChange={e => u("siren",e.target.value.replace(/\D/g,"").slice(0,9))} placeholder="Auto-rempli via SIRET" />
+
+            {/* Address with BAN autocomplete */}
+            <div style={{ marginBottom:16, position:"relative" }}>
+              <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#94a3b8", marginBottom:6, textTransform:"uppercase", letterSpacing:"0.05em" }}>Adresse 📍</label>
+              <input type="text" value={form.address} onChange={e => handleAddressInput(e.target.value)} onBlur={() => setTimeout(() => setShowAddrDropdown(false), 200)} placeholder="Tapez pour rechercher une adresse..."
+                style={{ width:"100%", padding:"12px 16px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:10, color:"#e2e8f0", fontSize:14, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }}
+                onFocus={e => { e.target.style.borderColor="#f97316"; if(addressSuggestions.length>0) setShowAddrDropdown(true); }} />
+              {showAddrDropdown && addressSuggestions.length > 0 && (
+                <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:50, background:"#1a1a2e", border:"1px solid rgba(255,255,255,0.15)", borderRadius:10, marginTop:4, overflow:"hidden", boxShadow:"0 8px 32px rgba(0,0,0,0.5)" }}>
+                  {addressSuggestions.map((a, i) => (
+                    <div key={i} onClick={() => selectAddress(a)}
+                      style={{ padding:"10px 14px", cursor:"pointer", fontSize:13, color:"#e2e8f0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}
+                      onMouseEnter={e => e.currentTarget.style.background="rgba(249,115,22,0.1)"}
+                      onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                      📍 {a.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:12 }}>
-              <Input label="Ville" value={form.city} onChange={e => u("city",e.target.value)} placeholder="Paris" />
+              <Input label="Ville" value={form.city} onChange={e => u("city",e.target.value)} placeholder="Auto-rempli ou saisie" />
               <Input label="Code postal" value={form.postalCode} onChange={e => u("postalCode",e.target.value.replace(/\D/g,"").slice(0,5))} placeholder="75001" />
             </div>
             <ErrorMsg msg={error} />
