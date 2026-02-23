@@ -826,7 +826,8 @@
                 address: s.adresse || '',
                 city: s.libelle_commune || '',
                 postalCode: s.code_postal || '',
-                activity: s.libelle_activite_principale || match.libelle_activite_principale || '',
+                activityCode: s.activite_principale || match.activite_principale || '',
+                activity: s.libelle_activite_principale || match.libelle_activite_principale || ({'49.41A':'Transport routier de fret de proximité','49.41B':'Transport routier de fret interurbain','49.41C':'Location de camions avec chauffeur','49.42Z':'Services de déménagement','52.29A':'Messagerie, fret express','52.29B':'Affrètement et organisation des transports','53.20Z':'Autres activités de poste et de courrier'}[s.activite_principale || match.activite_principale] || s.activite_principale || match.activite_principale || ''),
                 active: s.etat_administratif === 'A'
               };
               setCompany(companyData);
@@ -955,8 +956,22 @@
         const result = await res.json();
 
         if (res.ok) {
+          // Store auth data
+          try {
+            if (result.accessToken) localStorage.setItem('fn_token', result.accessToken);
+            if (result.user) localStorage.setItem('fn_user', JSON.stringify(result.user));
+            if (result.refreshToken) localStorage.setItem('fn_refresh', result.refreshToken);
+          } catch(e) {}
           document.getElementById('registrationForm').classList.add('hidden');
           document.getElementById('successMessage').classList.remove('hidden');
+          // Update success link based on role
+          const role = result.user?.role;
+          const link = document.querySelector('#successMessage a');
+          if (link) {
+            if (role === 'TRANSPORTEUR') link.href = '/transporteur.html';
+            else if (role === 'CHARGEUR') link.href = '/chargeur.html';
+            else link.href = '/app.html';
+          }
         } else {
           errEl.textContent = result.error || result.message || 'Erreur lors de l\'inscription';
           errEl.classList.remove('hidden');

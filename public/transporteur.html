@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- CSP managed by server -->
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>FRETNOW — Espace Transporteur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800;9..40,900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#F7F7F5;--surface:#FFF;--surface2:#FAFAF8;--surface3:#F0EFEC;
+  --border:#E8E6E1;--border2:#D8D5CE;--muted:#A09B90;--text:#4A4640;--text2:#6E6960;--dark:#1C1A17;
+  --blue:#2563EB;--blue-bg:#EFF6FF;--blue2:#1D4ED8;
+  --green:#059669;--green-bg:#ECFDF5;--green2:#047857;
+  --orange:#D97706;--orange-bg:#FFFBEB;
+  --red:#DC2626;--red-bg:#FEF2F2;
+  --purple:#7C3AED;--purple-bg:#F5F3FF;
+  --sw:250px;
+}
+html{font-size:14px}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.mono{font-family:'JetBrains Mono',monospace}
+::selection{background:var(--blue);color:#fff}
+
+/* ═══ TOAST ═══ */
+#toasts{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{padding:12px 18px;border-radius:8px;font:600 13px 'DM Sans',sans-serif;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.15);animation:toastIn .3s ease-out;pointer-events:auto;max-width:360px}
+.toast.ok{background:#059669}.toast.info{background:#2563EB}.toast.warn{background:#D97706}.toast.err{background:#DC2626}
+@keyframes toastIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateX(30px)}}
+
+/* ═══ RGPD BANNER ═══ */
+#rgpd{position:fixed;bottom:0;left:0;right:0;z-index:9998;background:#111;color:#ccc;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;font-size:12px;line-height:1.5;box-shadow:0 -4px 20px rgba(0,0,0,.15)}
+#rgpd.hidden{display:none}
+#rgpd a{color:var(--blue);text-decoration:underline;cursor:pointer}
+#rgpd .btns{display:flex;gap:8px;flex-shrink:0}
+#rgpd .btns button{padding:8px 16px;border-radius:6px;border:none;font:600 12px 'DM Sans',sans-serif;cursor:pointer}
+#rgpd .accept{background:var(--green);color:#fff}
+#rgpd .refuse{background:#333;color:#ccc}
+
+/* ═══ MODAL ═══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9997;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.show{opacity:1;pointer-events:auto}
+.modal{background:var(--surface);border-radius:12px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--border);font-size:15px;font-weight:800;color:var(--dark);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--surface);z-index:1}
+.modal-head .close{width:28px;height:28px;border-radius:6px;border:none;background:var(--surface3);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.modal-body{padding:22px;font-size:13px;line-height:1.7;color:var(--text)}
+.modal-body h4{font-size:14px;font-weight:700;color:var(--dark);margin:16px 0 6px}
+.modal-body h4:first-child{margin-top:0}
+
+/* ═══ SIDEBAR ═══ */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sw);background:#111;display:flex;flex-direction:column;z-index:50;transition:transform .25s}
+.sb-brand{padding:22px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #222}
+.sb-brand .dot{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,#2563EB,#059669)}
+.sb-brand span{font-weight:800;font-size:16px;color:#fff;letter-spacing:-.3px}
+.sb-brand .pro{font-size:9px;font-weight:700;background:#059669;color:#fff;padding:2px 6px;border-radius:3px;margin-left:auto;text-transform:uppercase;letter-spacing:.5px}
+
+.sb-nav{flex:1;padding:14px 10px;display:flex;flex-direction:column;gap:1px;overflow-y:auto}
+.sb-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:13px;font-weight:500;color:#777;cursor:pointer;transition:all .15s;position:relative;user-select:none}
+.sb-item:hover{background:#1E1E1E;color:#bbb}
+.sb-item.active{background:rgba(37,99,235,.12);color:#60A5FA}
+.sb-item .ico{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.sb-item .pill{position:absolute;right:10px;min-width:18px;text-align:center;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700}
+.sb-item .pill.red{background:#DC2626;color:#fff}
+.sb-item .pill.new{background:#D97706;color:#fff;font-size:8px;text-transform:uppercase;letter-spacing:.5px}
+.sb-sep{height:1px;background:#222;margin:8px 4px}
+
+.sb-fuel{margin:0 10px 8px;padding:10px 12px;border-radius:8px;background:#1A1A1A;display:flex;align-items:center;gap:8px;font-size:12px;color:#D97706;font-weight:600}
+.sb-fuel .pulse{width:6px;height:6px;border-radius:50%;background:#D97706;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.sb-user{padding:14px;border-top:1px solid #222;display:flex;align-items:center;gap:10px}
+.sb-avatar{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#2563EB,#059669);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;flex-shrink:0}
+.sb-user .name{font-size:12px;font-weight:700;color:#ddd}
+.sb-user .sub{font-size:10px;color:#666;margin-top:1px}
+
+/* ═══ MOBILE MENU ═══ */
+.burger{display:none;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:45;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.show{opacity:1;pointer-events:auto}
+
+/* ═══ MAIN ═══ */
+.main{margin-left:var(--sw);min-height:100vh;display:flex;flex-direction:column}
+
+.topbar{position:sticky;top:0;z-index:40;background:rgba(247,247,245,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar-left h1{font-size:16px;font-weight:800;color:var(--dark);letter-spacing:-.3px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.tb-time{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.tb-btn{padding:7px 14px;border-radius:7px;font:600 12px 'DM Sans',sans-serif;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);transition:all .15s}
+.tb-btn:hover{border-color:var(--blue);color:var(--blue)}
+.tb-btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.tb-btn.primary:hover{background:var(--blue2)}
+.tb-btn:disabled{opacity:.4;cursor:not-allowed}
+
+.content{padding:24px 28px;flex:1}
+
+/* Pages */
+.pg{display:none;animation:fadeUp .25s ease-out}
+.pg.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ═══ COMPONENTS ═══ */
+.bdg{display:inline-flex;align-items:center;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;gap:4px}
+.bdg-blue{background:var(--blue-bg);color:var(--blue)}
+.bdg-green{background:var(--green-bg);color:var(--green)}
+.bdg-orange{background:var(--orange-bg);color:var(--orange)}
+.bdg-red{background:var(--red-bg);color:var(--red)}
+.bdg-purple{background:var(--purple-bg);color:var(--purple)}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px}
+.card-hd{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-hd h3{font-size:13px;font-weight:700;color:var(--dark)}
+.card-bd{padding:16px 18px}
+
+/* ═══ DASHBOARD ═══ */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;transition:box-shadow .2s}
+.kpi:hover{box-shadow:0 4px 16px rgba(0,0,0,.04)}
+.kpi .label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.kpi .val{font-size:26px;font-weight:900;color:var(--dark);font-family:'JetBrains Mono',monospace;line-height:1}
+.kpi .delta{font-size:11px;font-weight:600;margin-top:6px;display:flex;align-items:center;gap:3px}
+.kpi .delta.up{color:var(--green)}.kpi .delta.dn{color:var(--red)}
+
+.dash-cols{display:grid;grid-template-columns:5fr 3fr;gap:16px}
+
+.act{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start}
+.act:last-child{border:none}
+.act-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.act-ico.match{background:var(--blue-bg)}.act-ico.money{background:var(--green-bg)}.act-ico.check{background:var(--purple-bg)}.act-ico.share{background:var(--orange-bg)}
+.act-txt{font-size:12px;color:var(--text);line-height:1.5}
+.act-txt strong{font-weight:700;color:var(--dark)}
+.act-time{font-size:10px;color:var(--muted);margin-top:2px}
+
+.score-wrap{display:flex;flex-direction:column;align-items:center;padding:20px 0 12px}
+.score-ring{width:120px;height:120px;position:relative}
+.score-ring svg{transform:rotate(-90deg)}
+.score-ring .bg{fill:none;stroke:var(--surface3);stroke-width:9}
+.score-ring .fg{fill:none;stroke:var(--green);stroke-width:9;stroke-linecap:round}
+.score-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score-center .num{font-size:30px;font-weight:900;color:var(--dark);font-family:'JetBrains Mono',monospace;line-height:1}
+.score-center .of{font-size:10px;color:var(--muted);font-weight:600;margin-top:2px}
+.score-items{padding:8px 18px 14px;width:100%}
+.sr{display:flex;justify-content:space-between;padding:5px 0;font-size:12px}
+.sr .k{color:var(--text2)}.sr .v{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--dark)}
+
+/* ═══ FEED ═══ */
+.filters{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+.fbtn{padding:6px 14px;border-radius:100px;font:500 12px 'DM Sans',sans-serif;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s;user-select:none}
+.fbtn:hover{border-color:var(--blue);color:var(--blue)}
+.fbtn.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+.offer{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:12px;transition:all .2s}
+.offer:hover{box-shadow:0 4px 20px rgba(0,0,0,.05);border-color:var(--blue)}
+.offer.saved{border-color:var(--orange);background:var(--orange-bg)}
+
+.offer-r1{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.offer-route{display:flex;align-items:center;gap:8px}
+.offer-route .city{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--dark)}
+.offer-route .arr{color:var(--muted);font-size:18px}
+.osc{padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700}
+.osc.high{background:var(--green-bg);color:var(--green)}.osc.mid{background:var(--orange-bg);color:var(--orange)}
+
+.offer-tags{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.otag{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.otag.retour{background:var(--green-bg);color:var(--green)}
+.otag.urgent{background:var(--red-bg);color:var(--red)}
+.otag.regulier{background:var(--purple-bg);color:var(--purple)}
+
+.offer-info{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text2)}
+.chip strong{font-weight:700;color:var(--dark)}
+
+.offer-bot{display:flex;align-items:center;justify-content:space-between;padding-top:14px;border-top:1px solid var(--border)}
+.offer-price .amount{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:900;color:var(--dark);letter-spacing:-.5px}
+.offer-price .basis{font-size:10px;color:var(--muted);margin-top:2px}
+.offer-btns{display:flex;gap:6px}
+.ob{padding:8px 16px;border-radius:7px;font:600 12px 'DM Sans',sans-serif;border:none;cursor:pointer;transition:all .15s}
+.ob.contact{background:var(--blue);color:#fff}
+.ob.contact:hover{background:var(--blue2)}
+.ob.save{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.ob.save:hover{border-color:var(--blue);color:var(--blue)}
+.ob.saved{background:var(--orange-bg);color:var(--orange);border-color:var(--orange)}
+.ob.take{background:var(--green);color:#fff}
+.ob.take:hover{background:var(--green2)}
+.ob.question{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.ob:disabled{opacity:.4;cursor:not-allowed}
+
+/* ═══ SHARE ═══ */
+.share-form{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px;margin-bottom:22px}
+.share-form h3{font-size:15px;font-weight:800;color:var(--dark);margin-bottom:2px}
+.share-form .desc{font-size:12px;color:var(--muted);margin-bottom:18px}
+.sf-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg.full{grid-column:1/-1}
+.fg label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px}
+.fg input,.fg select,.fg textarea{padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font:400 13px 'DM Sans',sans-serif;color:var(--dark);background:var(--surface2);outline:none;transition:border .2s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--blue);background:#fff}
+.fg input.err,.fg select.err,.fg textarea.err{border-color:var(--red);background:var(--red-bg)}
+.fg textarea{min-height:56px;resize:vertical}
+.sf-footer{margin-top:14px;display:flex;justify-content:space-between;align-items:center}
+.sf-footer .est{font-size:12px;color:var(--text2)}
+.sf-footer .est strong{color:var(--green);font-family:'JetBrains Mono',monospace}
+
+.sm{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:12px;border-left:3px solid var(--orange);transition:all .2s}
+.sm:hover{box-shadow:0 4px 16px rgba(0,0,0,.04)}
+.sm.taken{opacity:.5;pointer-events:none;border-left-color:var(--green)}
+.sm-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.sm-route{font-weight:800;font-size:15px;color:var(--dark)}
+.sm-comm{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--green);font-size:13px}
+.sm-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.sm-by{font-size:11px;color:var(--muted);margin-bottom:10px}
+.sm-by strong{color:var(--text)}
+.sm-btns{display:flex;gap:6px}
+
+/* ═══ CHECK ═══ */
+.ck-intro{background:var(--purple-bg);border:1px solid rgba(124,58,237,.15);border-radius:10px;padding:16px 18px;margin-bottom:20px;display:flex;gap:14px;align-items:center}
+.ck-intro .icon{font-size:28px}
+.ck-intro h3{font-size:14px;font-weight:800;color:var(--dark);margin-bottom:1px}
+.ck-intro p{font-size:12px;color:var(--text2)}
+.ck-sel{display:flex;gap:10px;margin-bottom:20px}
+.ck-sel select{flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font:500 13px 'DM Sans',sans-serif;color:var(--dark);background:var(--surface2)}
+
+.ck-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.ck-hd{padding:11px 16px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:var(--dark)}
+.ck-hd .prog{font-size:11px;font-weight:600;color:var(--muted);font-family:'JetBrains Mono',monospace}
+
+.ck-item{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .1s;user-select:none}
+.ck-item:last-child{border:none}
+.ck-item:hover{background:var(--surface2)}
+.ck-box{width:22px;height:22px;border-radius:6px;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;font-size:12px;color:transparent}
+.ck-item.done .ck-box{background:var(--green);border-color:var(--green);color:#fff}
+.ck-lbl{font-size:13px;color:var(--text);flex:1}
+.ck-item.done .ck-lbl{color:var(--muted);text-decoration:line-through}
+.ck-crit{font-size:9px;font-weight:700;color:var(--red);background:var(--red-bg);padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.3px}
+
+.ck-sub{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between}
+.ck-sub .summary{font-size:13px;color:var(--text)}
+.ck-sub .summary strong{font-family:'JetBrains Mono',monospace}
+.ck-history{margin-top:20px}
+.ck-history h3{font-size:14px;font-weight:800;color:var(--dark);margin-bottom:12px}
+.ck-log{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.ck-log .k{color:var(--text)}.ck-log .v{font-family:'JetBrains Mono',monospace;color:var(--muted)}
+
+/* ═══ CNR ═══ */
+.cnr-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.cnr-form{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px}
+.cnr-form h3{font-size:15px;font-weight:800;color:var(--dark);margin-bottom:2px}
+.cnr-form .desc{font-size:12px;color:var(--muted);margin-bottom:16px}
+.cnr-live{display:flex;align-items:center;gap:6px;padding:10px 12px;background:var(--orange-bg);border-radius:7px;font-size:11px;color:var(--orange);font-weight:600;margin-bottom:14px}
+.cnr-live .pulse{width:6px;height:6px;border-radius:50%;background:var(--orange);animation:pulse 2s infinite}
+
+.cnr-result{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px}
+.cnr-result h3{font-size:15px;font-weight:800;color:var(--dark);margin-bottom:16px}
+.cnr-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.cnr-row:last-of-type{border:none}
+.cnr-row .k{color:var(--text2)}.cnr-row .v{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--dark)}
+.cnr-total{margin-top:14px;padding:16px;background:var(--green-bg);border-radius:8px;text-align:center}
+.cnr-total .label{font-size:11px;font-weight:600;color:var(--green2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+.cnr-total .amount{font-size:32px;font-weight:900;color:var(--dark);font-family:'JetBrains Mono',monospace}
+.cnr-total .range{font-size:12px;color:var(--text2);margin-top:4px}
+
+/* ═══ PROFILE ═══ */
+.prof-hd{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.prof-av{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#2563EB,#059669);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;flex-shrink:0}
+.prof-info h2{font-size:18px;font-weight:900;color:var(--dark)}
+.prof-meta{display:flex;gap:14px;margin-top:4px;flex-wrap:wrap}
+.prof-meta span{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.prof-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:1024px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:none}
+  .main{margin-left:0}
+  .burger{display:flex}
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .dash-cols,.cnr-grid,.prof-grid{grid-template-columns:1fr}
+  .sf-grid{grid-template-columns:1fr}
+  .content{padding:20px 16px}
+  .topbar{padding:0 16px}
+}
+@media(max-width:480px){
+  .kpi-row{grid-template-columns:1fr}
+  .offer-bot{flex-direction:column;align-items:flex-start;gap:12px}
+}
+</style>
+</head>
+<body>
+<script>
+const API = window.location.origin + '/api';
+const token = localStorage.getItem('fn_token');
+const user = JSON.parse(localStorage.getItem('fn_user') || 'null');
+if (!token || !user) { window.location.href = '/app.html'; }
+if (user && user.role !== 'TRANSPORTEUR' && user.role !== 'SUPER_ADMIN') { window.location.href = '/chargeur.html'; }
+document.addEventListener('DOMContentLoaded', () => {
+  const initials = ((user?.firstName?.[0] || '') + (user?.lastName?.[0] || '')).toUpperCase() || 'FN';
+  document.querySelectorAll('.sb-avatar').forEach(el => el.textContent = initials);
+  const nameEl = document.querySelector('.sb-user .name');
+  const subEl = document.querySelector('.sb-user .sub');
+  if (nameEl) nameEl.textContent = user?.firstName + ' ' + user?.lastName;
+  if (subEl) subEl.textContent = user?.email || '';
+});
+function logout() {
+  localStorage.removeItem('fn_token');
+  localStorage.removeItem('fn_user');
+  localStorage.removeItem('fn_refresh');
+  window.location.href = '/app.html';
+}
+</script>
+
+<!-- TOASTS -->
+<div id="toasts"></div>
+
+<!-- RGPD BANNER -->
+<div id="rgpd">
+  <div>🔒 FRETNOW utilise des cookies strictement nécessaires au fonctionnement de la plateforme. Aucune donnée n'est partagée avec des tiers. <a onclick="showModal('privacy')">Politique de confidentialité</a></div>
+  <div class="btns"><button class="refuse" onclick="rgpdChoice('refuse')">Refuser</button><button class="accept" onclick="rgpdChoice('accept')">Accepter</button></div>
+</div>
+
+<!-- PRIVACY MODAL -->
+<div class="modal-overlay" id="modal-privacy">
+  <div class="modal">
+    <div class="modal-head">🔒 Politique de confidentialité FRETNOW <button class="close" onclick="hideModal('privacy')">✕</button></div>
+    <div class="modal-body">
+      <h4>1. Responsable du traitement</h4>
+      FRETNOW AGI, OBNF en cours d'immatriculation. Siège : Paris, France. Contact DPO : dpo@fretnow.com
+
+      <h4>2. Données collectées</h4>
+      Données d'identification professionnelle : SIREN/SIRET, raison sociale, adresse du siège. Données de contact : nom du dirigeant, email, téléphone professionnel. Données de flotte : immatriculations, types de véhicules. Documents réglementaires : Kbis, licence transport, RC Pro, attestation URSSAF. Données d'activité : missions, trajets, checks véhicule.
+
+      <h4>3. Base légale</h4>
+      Exécution du contrat de service (Art. 6.1.b RGPD) pour le traitement des données nécessaires à la mise en relation transporteurs/chargeurs. Intérêt légitime (Art. 6.1.f RGPD) pour l'amélioration du service et la prévention des fraudes. Obligation légale (Art. 6.1.c RGPD) pour la conservation des documents de transport.
+
+      <h4>4. Destinataires</h4>
+      Les données sont accessibles uniquement aux équipes FRETNOW habilitées. Les données de profil transporteur (raison sociale, zone, score, type de véhicules) sont visibles par les chargeurs dans le cadre de la mise en relation. Aucune donnée n'est vendue ni partagée à des tiers à des fins commerciales.
+
+      <h4>5. Durée de conservation</h4>
+      Données de compte : durée de la relation contractuelle + 3 ans. Documents réglementaires : durée de validité + 1 an. Données de missions : 5 ans (obligation légale transport). Checks véhicule : 2 ans. Logs de connexion : 12 mois.
+
+      <h4>6. Sécurité des données</h4>
+      Chiffrement TLS en transit. Chiffrement AES-256 au repos pour les documents sensibles. Accès restreint par rôle. Journalisation des accès aux données. Hébergement en France (OVH / Scaleway).
+
+      <h4>7. Vos droits</h4>
+      Conformément au RGPD, vous disposez des droits d'accès, de rectification, d'effacement, de limitation, de portabilité et d'opposition. Pour exercer ces droits : dpo@fretnow.com. Délai de réponse : 30 jours maximum. Droit de réclamation auprès de la CNIL : www.cnil.fr
+
+      <h4>8. Cookies</h4>
+      FRETNOW utilise uniquement des cookies strictement nécessaires (session, préférences d'interface). Aucun cookie de tracking, analytics ou publicitaire n'est utilisé. Aucun consentement n'est requis pour les cookies strictement nécessaires (Art. 82 loi Informatique et Libertés).
+
+      <h4>9. Transferts hors UE</h4>
+      Aucun transfert de données hors de l'Union Européenne n'est effectué.
+
+      <h4>10. Mise à jour</h4>
+      Dernière mise à jour : 20 février 2026. Toute modification sera notifiée par email aux utilisateurs inscrits.
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT MODAL -->
+<div class="modal-overlay" id="modal-contact">
+  <div class="modal">
+    <div class="modal-head">📞 Contacter le chargeur <button class="close" onclick="hideModal('contact')">✕</button></div>
+    <div class="modal-body" id="contact-body"></div>
+  </div>
+</div>
+
+<!-- MOBILE OVERLAY -->
+<div class="overlay" id="mob-overlay" onclick="toggleMenu()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-brand"><div class="dot"></div><span>FRETNOW</span><span class="pro">PRO</span></div>
+  <nav class="sb-nav">
+    <div class="sb-item active" data-tab="dash" onclick="go('dash',this)"><span class="ico">📊</span>Tableau de bord</div>
+    <div class="sb-item" data-tab="feed" onclick="go('feed',this)"><span class="ico">🚛</span>Bourse de fret<span class="pill red" id="feed-count">5</span></div>
+    <div class="sb-item" data-tab="share" onclick="go('share',this)"><span class="ico">🔄</span>Partage missions<span class="pill new">new</span></div>
+    <div class="sb-item" data-tab="check" onclick="go('check',this)"><span class="ico">🔧</span>Check véhicule</div>
+    <div class="sb-item" data-tab="cnr" onclick="go('cnr',this)"><span class="ico">🧮</span>Calculateur CNR</div>
+    <div class="sb-sep"></div>
+    <div class="sb-item" data-tab="profile" onclick="go('profile',this)"><span class="ico">👤</span>Mon profil</div>
+  </nav>
+  <div class="sb-fuel"><div class="pulse"></div>⛽ Gazole : 1,52 €/L</div>
+  <div class="sb-user"><div class="sb-avatar">TJ</div><div><div class="name">TRANSTEK</div><div class="sub">Tarek Jaziri · IDF</div></div></div>
+<div class="sb-fuel" onclick="logout()" style="background:#2a0a0a;color:#ef4444;cursor:pointer">🚪 Déconnexion</div>
+</aside>
+
+<main class="main">
+
+<!-- ══════ DASHBOARD ══════ -->
+<div class="pg active" id="pg-dash">
+  <div class="topbar">
+    <div class="topbar-left"><button class="burger" onclick="toggleMenu()">☰</button><h1>📊 Tableau de bord</h1></div>
+    <div class="topbar-right"><span class="tb-time" id="clock"></span><button class="tb-btn primary" onclick="goTo('feed')">Voir les offres →</button></div>
+  </div>
+  <div class="content">
+    <div class="kpi-row">
+      <div class="kpi"><div class="label">Missions ce mois</div><div class="val" id="kpi-missions">12</div><div class="delta up">↑ +3 vs mois dernier</div></div>
+      <div class="kpi"><div class="label">Retours chargés</div><div class="val">8</div><div class="delta up">↑ 67% remplissage</div></div>
+      <div class="kpi"><div class="label">Commissions partagées</div><div class="val" style="color:var(--green)" id="kpi-comm">384€</div><div class="delta up">↑ 4 missions</div></div>
+      <div class="kpi"><div class="label">Score fiabilité</div><div class="val" style="color:var(--purple)" id="kpi-score">4.8</div><div class="delta up">Top 15%</div></div>
+    </div>
+    <div class="dash-cols">
+      <div class="card">
+        <div class="card-hd"><h3>Activité récente</h3><span class="bdg bdg-blue">Aujourd'hui</span></div>
+        <div class="card-bd" style="padding:0" id="activity-feed">
+          <div class="act"><div class="act-ico match">🎯</div><div><div class="act-txt"><strong>Match 94%</strong> — Rungis → Lyon · 18 pal.</div><div class="act-time">Il y a 12 min</div></div></div>
+          <div class="act"><div class="act-ico money">💰</div><div><div class="act-txt">Commission : <strong>+96€</strong> — Paris → Marseille</div><div class="act-time">Il y a 2h</div></div></div>
+          <div class="act"><div class="act-ico check">🔧</div><div><div class="act-txt">Check véhicule OK — <strong>DAF XF #AB-123-CD</strong></div><div class="act-time">07:15</div></div></div>
+          <div class="act"><div class="act-ico share">🔄</div><div><div class="act-txt">Mission acceptée — <strong>Stéphane R.</strong> · Lille → Paris</div><div class="act-time">Hier 16:30</div></div></div>
+          <div class="act"><div class="act-ico match">🎯</div><div><div class="act-txt"><strong>Match 87%</strong> — Paris → Bordeaux · 22T</div><div class="act-time">Hier 14:00</div></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><h3>Score de fiabilité</h3><span class="bdg bdg-green">Top 15%</span></div>
+        <div class="card-bd" style="padding:0">
+          <div class="score-wrap"><div class="score-ring"><svg width="120" height="120" viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="50"/><circle class="fg" cx="60" cy="60" r="50" stroke-dasharray="314.16" stroke-dashoffset="31.4"/></svg><div class="score-center"><div class="num">4.8</div><div class="of">/ 5.0</div></div></div></div>
+          <div class="score-items">
+            <div class="sr"><span class="k">✅ Missions réussies</span><span class="v">+120</span></div>
+            <div class="sr"><span class="k">🔧 Checks véhicule</span><span class="v" id="score-checks">+90</span></div>
+            <div class="sr"><span class="k">🔄 Missions partagées</span><span class="v">+15</span></div>
+            <div class="sr"><span class="k">⭐ Évaluations</span><span class="v">+48</span></div>
+            <div class="sr"><span class="k">📄 Docs à jour</span><span class="v">+25</span></div>
+            <div class="sr" style="border-top:1.5px solid var(--border);padding-top:8px;margin-top:4px"><span class="k" style="font-weight:700;color:var(--dark)">Total</span><span class="v" style="color:var(--green)" id="score-total">298 pts</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ FEED ══════ -->
+<div class="pg" id="pg-feed">
+  <div class="topbar">
+    <div class="topbar-left"><button class="burger" onclick="toggleMenu()">☰</button><h1>🚛 Bourse de fret</h1></div>
+    <div class="topbar-right"><span class="bdg bdg-blue" id="feed-badge">5 offres</span></div>
+  </div>
+  <div class="content">
+    <div class="filters" id="filters"></div>
+    <div id="offers-list"></div>
+  </div>
+</div>
+
+<!-- ══════ SHARE ══════ -->
+<div class="pg" id="pg-share">
+  <div class="topbar">
+    <div class="topbar-left"><button class="burger" onclick="toggleMenu()">☰</button><h1>🔄 Partage de missions</h1></div>
+    <div class="topbar-right"><span class="bdg bdg-green">Commission 8%</span></div>
+  </div>
+  <div class="content">
+    <div class="share-form">
+      <h3>📤 Proposer une mission au réseau</h3>
+      <div class="desc">Vous ne pouvez pas assurer une course ? Proposez-la et touchez 8% de commission.</div>
+      <div class="sf-grid">
+        <div class="fg"><label>Départ *</label><input id="sh-from" placeholder="Ville, CP" required></div>
+        <div class="fg"><label>Arrivée *</label><input id="sh-to" placeholder="Ville, CP" required></div>
+        <div class="fg"><label>Date *</label><input type="date" id="sh-date" required></div>
+        <div class="fg"><label>Prix client (€ HT) *</label><input type="number" id="sh-price" placeholder="1200" min="50" required oninput="updateCommEst()"></div>
+        <div class="fg"><label>Véhicule</label><select id="sh-vehicle"><option>Semi tautliner</option><option>Semi frigo</option><option>Porteur 12T</option><option>Fourgon 3.5T</option><option>Benne</option></select></div>
+        <div class="fg"><label>Chargement</label><input id="sh-load" placeholder="18 palettes, 15T..."></div>
+        <div class="fg full"><label>Détails</label><textarea id="sh-details" placeholder="Horaires, contact client, particularités..."></textarea></div>
+      </div>
+      <div class="sf-footer">
+        <div class="est">Commission estimée : <strong id="comm-est">~0€</strong></div>
+        <button class="tb-btn primary" onclick="publishMission()">📤 Publier la mission</button>
+      </div>
+    </div>
+    <h3 style="font-size:14px;font-weight:800;color:var(--dark);margin-bottom:14px">🔥 Missions disponibles du réseau</h3>
+    <div id="shared-list"></div>
+  </div>
+</div>
+
+<!-- ══════ CHECK ══════ -->
+<div class="pg" id="pg-check">
+  <div class="topbar">
+    <div class="topbar-left"><button class="burger" onclick="toggleMenu()">☰</button><h1>🔧 Check véhicule</h1></div>
+    <div class="topbar-right"><span class="bdg bdg-purple">+5 pts/check</span></div>
+  </div>
+  <div class="content">
+    <div class="ck-intro"><div class="icon">🛡️</div><div><h3>Check pré-départ</h3><p>Validez l'état de votre véhicule. Horodaté et archivé en cas de contrôle.</p></div></div>
+    <div class="ck-sel">
+      <select id="ck-vehicle"><option>🚛 Semi DAF XF · AB-***-CD</option><option>🚚 Porteur MAN TGL · EF-***-GH</option></select>
+      <select id="ck-mission"><option>Rungis → Lyon · Lun 24 fév</option><option>Paris → Bordeaux · Demain</option><option>Check libre (pas de mission)</option></select>
+    </div>
+    <div id="check-sections"></div>
+    <div class="ck-sub" id="ckSubmit">
+      <div class="summary">Points : <strong id="ckTotal">0/18</strong></div>
+      <button class="tb-btn primary" id="ckBtn" onclick="submitCk()" disabled>✅ Valider le check</button>
+    </div>
+    <div class="ck-history" id="ck-history"></div>
+  </div>
+</div>
+
+<!-- ══════ CNR ══════ -->
+<div class="pg" id="pg-cnr">
+  <div class="topbar">
+    <div class="topbar-left"><button class="burger" onclick="toggleMenu()">☰</button><h1>🧮 Calculateur CNR</h1></div>
+    <div class="topbar-right"><span class="bdg bdg-orange">⛽ 1,52 €/L</span></div>
+  </div>
+  <div class="content">
+    <div class="cnr-grid">
+      <div class="cnr-form">
+        <h3>Paramètres</h3>
+        <div class="desc">Indices officiels du Comité National Routier</div>
+        <div class="cnr-live"><div class="pulse"></div>Prix gazole temps réel via API gouv.fr</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="fg"><label>Départ</label><input id="cnr-from" value="Paris (75)"></div>
+          <div class="fg"><label>Arrivée</label><input id="cnr-to" value="Lyon (69)"></div>
+          <div class="fg"><label>Distance (km)</label><input type="number" id="cnr-km" value="465" min="1" max="5000" oninput="calcCNR()"></div>
+          <div class="fg"><label>Véhicule</label><select id="cnr-type" onchange="calcCNR()"><option value="semi">Semi 44T</option><option value="porteur">Porteur 7.5-19T</option><option value="fourgon">Fourgon 3.5T</option></select></div>
+          <div class="fg"><label>Gazole (€/L)</label><input type="number" id="cnr-fuel" value="1.52" step="0.01" min="0.5" max="4" oninput="calcCNR()"></div>
+          <div class="fg"><label>Péages (€)</label><input type="number" id="cnr-tolls" value="45" min="0" oninput="calcCNR()"></div>
+        </div>
+      </div>
+      <div class="cnr-result">
+        <h3>Estimation du coût</h3>
+        <div class="cnr-row"><span class="k">⛽ Carburant</span><span class="v" id="r-fuel">—</span></div>
+        <div class="cnr-row"><span class="k">🛣️ Péages</span><span class="v" id="r-tolls">—</span></div>
+        <div class="cnr-row"><span class="k">👤 Conducteur</span><span class="v" id="r-drv">—</span></div>
+        <div class="cnr-row"><span class="k">🚛 Amortissement</span><span class="v" id="r-amor">—</span></div>
+        <div class="cnr-row"><span class="k">🔧 Entretien</span><span class="v" id="r-maint">—</span></div>
+        <div class="cnr-row"><span class="k">🛡️ Assurance</span><span class="v" id="r-ins">—</span></div>
+        <div class="cnr-row"><span class="k">🏢 Structure</span><span class="v" id="r-struct">—</span></div>
+        <div style="height:1px;background:var(--border);margin:8px 0"></div>
+        <div class="cnr-row"><span class="k" style="font-weight:700;color:var(--dark)">Coût de revient</span><span class="v" style="font-size:16px" id="r-total">—</span></div>
+        <div class="cnr-row"><span class="k">€/km</span><span class="v" id="r-perkm">—</span></div>
+        <div class="cnr-total"><div class="label">Prix de vente conseillé (15-25%)</div><div class="amount" id="r-sell">—</div><div class="range">Indice CNR + gazole temps réel</div></div>
+        <div style="margin-top:12px;padding:10px;background:var(--blue-bg);border-radius:6px;font-size:11px;color:var(--blue);text-align:center;font-weight:500">💡 Montrez ce calcul à votre client pour justifier votre tarif</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ PROFILE ══════ -->
+<div class="pg" id="pg-profile">
+  <div class="topbar">
+    <div class="topbar-left"><button class="burger" onclick="toggleMenu()">☰</button><h1>👤 Mon profil</h1></div>
+    <div class="topbar-right"><span class="bdg bdg-green">✅ Vérifié</span></div>
+  </div>
+  <div class="content">
+    <div class="prof-hd">
+      <div class="prof-av">TJ</div>
+      <div class="prof-info">
+        <h2>TRANSTEK</h2>
+        <div class="prof-meta"><span>🏢 818•••962</span><span>📍 Paris 19e</span><span>🚛 5 véhicules</span><span>⭐ 4.8/5</span></div>
+      </div>
+    </div>
+    <div class="prof-grid">
+      <div class="card"><div class="card-hd"><h3>📊 Statistiques</h3></div><div class="card-bd">
+        <div class="cnr-row"><span class="k">Missions réalisées</span><span class="v">47</span></div>
+        <div class="cnr-row"><span class="k">Retours chargés</span><span class="v">31</span></div>
+        <div class="cnr-row"><span class="k">Missions partagées</span><span class="v" id="prof-shared">8</span></div>
+        <div class="cnr-row"><span class="k">Commissions gagnées</span><span class="v" style="color:var(--green)" id="prof-comm">672€</span></div>
+        <div class="cnr-row"><span class="k">Taux remplissage</span><span class="v">66%</span></div>
+        <div class="cnr-row"><span class="k">Checks véhicule</span><span class="v" id="prof-checks">23</span></div>
+      </div></div>
+      <div class="card"><div class="card-hd"><h3>📄 Documents</h3><span class="bdg bdg-green">4/5</span></div><div class="card-bd">
+        <div class="cnr-row"><span class="k">🏢 Kbis</span><span class="bdg bdg-green">Valide</span></div>
+        <div class="cnr-row"><span class="k">📋 Licence transport</span><span class="bdg bdg-green">Valide</span></div>
+        <div class="cnr-row"><span class="k">🛡️ RC Pro</span><span class="bdg bdg-green">Valide</span></div>
+        <div class="cnr-row"><span class="k">📑 URSSAF</span><span class="bdg bdg-orange">Expire 45j</span></div>
+        <div class="cnr-row"><span class="k">🚛 Cartes grises</span><span class="bdg bdg-green">5 véhicules</span></div>
+      </div></div>
+      <div class="card"><div class="card-hd"><h3>🚛 Flotte</h3></div><div class="card-bd">
+        <div class="cnr-row"><span class="k">DAF XF 480 · AB-***-CD</span><span class="bdg bdg-green">Actif</span></div>
+        <div class="cnr-row"><span class="k">Renault T480 · CD-***-EF</span><span class="bdg bdg-green">Actif</span></div>
+        <div class="cnr-row"><span class="k">MAN TGL 12T · EF-***-GH</span><span class="bdg bdg-green">Actif</span></div>
+        <div class="cnr-row"><span class="k">Renault Master · GH-***-IJ</span><span class="bdg bdg-orange">Maintenance</span></div>
+        <div class="cnr-row"><span class="k">DAF XF Frigo · IJ-***-KL</span><span class="bdg bdg-green">Actif</span></div>
+      </div></div>
+      <div class="card"><div class="card-hd"><h3>💰 Commissions</h3></div><div class="card-bd" id="comm-list">
+        <div class="cnr-row"><span class="k">Paris → Marseille · 18/02</span><span class="v" style="color:var(--green)">+96€</span></div>
+        <div class="cnr-row"><span class="k">Rouen → Paris · 15/02</span><span class="v" style="color:var(--green)">+72€</span></div>
+        <div class="cnr-row"><span class="k">Lille → Lyon · 12/02</span><span class="v" style="color:var(--green)">+120€</span></div>
+        <div class="cnr-row"><span class="k">Paris → Nantes · 08/02</span><span class="v" style="color:var(--green)">+64€</span></div>
+        <div style="border-top:1.5px solid var(--border);margin-top:6px;padding-top:8px"><div class="cnr-row"><span class="k" style="font-weight:700">Total ce mois</span><span class="v" style="color:var(--green);font-size:16px">384€</span></div></div>
+      </div></div>
+    </div>
+    <div style="margin-top:20px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:13px;font-weight:700;color:var(--dark)">🔒 Vos données</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Conformément au RGPD, vous pouvez exporter ou supprimer vos données à tout moment.</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="tb-btn" onclick="exportData()">📥 Exporter</button>
+        <button class="tb-btn" style="color:var(--red);border-color:var(--red)" onclick="requestDeletion()">🗑️ Supprimer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ═══════════════════════════════════════
+// SECURITY: Input sanitization
+// ═══════════════════════════════════════
+function esc(str){
+  if(!str)return '';
+  const d=document.createElement('div');
+  d.appendChild(document.createTextNode(String(str)));
+  return d.innerHTML;
+}
+function sanitize(str){
+  return esc(str).replace(/[<>'"&]/g,c=>({'<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;','&':'&amp;'}[c]||c)).substring(0,500);
+}
+
+// ═══════════════════════════════════════
+// TOAST SYSTEM
+// ═══════════════════════════════════════
+function toast(msg,type='ok',dur=3000){
+  const t=document.createElement('div');
+  t.className='toast '+type;
+  t.textContent=msg;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(()=>{t.style.animation='toastOut .3s forwards';setTimeout(()=>t.remove(),300)},dur);
+}
+
+// ═══════════════════════════════════════
+// RGPD
+// ═══════════════════════════════════════
+function rgpdChoice(choice){
+  try{localStorage.setItem('fretnow_rgpd',choice)}catch(e){}
+  document.getElementById('rgpd').classList.add('hidden');
+  if(choice==='accept')toast('Préférences enregistrées','ok');
+  else toast('Cookies refusés — fonctionnalités limitées','warn');
+}
+(function(){try{if(localStorage.getItem('fretnow_rgpd'))document.getElementById('rgpd').classList.add('hidden')}catch(e){}})();
+
+// ═══════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════
+function showModal(id){document.getElementById('modal-'+id).classList.add('show')}
+function hideModal(id){document.getElementById('modal-'+id).classList.remove('show')}
+document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show')})});
+
+// ═══════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════
+function go(id,el){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pg-'+id).classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(s=>s.classList.remove('active'));
+  if(el)el.classList.add('active');
+  // Close mobile menu
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('mob-overlay').classList.remove('show');
+}
+function goTo(id){
+  const el=document.querySelector(`.sb-item[data-tab="${id}"]`);
+  go(id,el);
+}
+function toggleMenu(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('mob-overlay').classList.toggle('show');
+}
+
+// Clock
+function tick(){const d=new Date();const el=document.getElementById('clock');if(el)el.textContent=d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})+' · '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}
+tick();setInterval(tick,30000);
+
+// ═══════════════════════════════════════
+// OFFERS DATA + RENDERING
+// ═══════════════════════════════════════
+const OFFERS=[
+  {id:1,from:'RUNGIS (94)',to:'LYON (69)',km:465,load:'18 palettes',vehicle:'Semi frigo',date:'Lun 24 fév',time:'06:00 — 08:00',priceLow:726,priceHigh:890,match:94,tags:['retour','regulier'],basis:'Estimation CNR · Gazole 1,52€/L'},
+  {id:2,from:'PARIS (75)',to:'BORDEAUX (33)',km:584,load:'22T vrac',vehicle:'Semi bâché',date:'Demain',time:'14:00',priceLow:920,priceHigh:1130,match:87,tags:['urgent'],basis:'Estimation CNR · Péages A10'},
+  {id:3,from:'GENNEVILLIERS (92)',to:'LILLE (59)',km:225,load:'8 palettes',vehicle:'Porteur 12T',date:'Mer 26 fév',time:'',priceLow:340,priceHigh:420,match:72,tags:['retour'],basis:'Estimation CNR'},
+  {id:4,from:'MARSEILLE (13)',to:'PARIS (75)',km:775,load:'20 palettes',vehicle:'Semi tautliner',date:'Mar/Ven',time:'',priceLow:1180,priceHigh:1450,match:91,tags:['retour','regulier'],basis:'Estimation CNR · Péages inclus'},
+  {id:5,from:'TOULOUSE (31)',to:'PARIS (75)',km:680,load:'24 pal.',vehicle:'Semi tautliner',date:'Jeu 27 fév',time:'05:00',priceLow:1050,priceHigh:1290,match:82,tags:['retour'],basis:'Estimation CNR'}
+];
+
+let savedOffers=new Set();
+try{const s=JSON.parse(localStorage.getItem('fretnow_saved')||'[]');s.forEach(i=>savedOffers.add(i))}catch(e){}
+let activeFilter='all';
+
+const FILTERS=[
+  {key:'all',label:'Tous'},
+  {key:'retour',label:'🔄 Retours chargés'},
+  {key:'semi',label:'🚛 Semi'},
+  {key:'frigo',label:'❄️ Frigo'},
+  {key:'urgent',label:'⚡ Urgent'}
+];
+
+function renderFilters(){
+  const c=document.getElementById('filters');
+  c.innerHTML=FILTERS.map(f=>`<div class="fbtn ${f.key===activeFilter?'on':''}" onclick="setFilter('${f.key}')">${f.label}</div>`).join('');
+}
+
+function setFilter(key){
+  activeFilter=key;
+  renderFilters();
+  renderOffers();
+}
+
+function renderOffers(){
+  let filtered=OFFERS;
+  if(activeFilter!=='all'){
+    if(activeFilter==='semi')filtered=OFFERS.filter(o=>o.vehicle.toLowerCase().includes('semi'));
+    else if(activeFilter==='frigo')filtered=OFFERS.filter(o=>o.vehicle.toLowerCase().includes('frigo'));
+    else filtered=OFFERS.filter(o=>o.tags.includes(activeFilter));
+  }
+  const c=document.getElementById('offers-list');
+  if(!filtered.length){c.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">Aucune offre pour ce filtre</div>';return}
+  c.innerHTML=filtered.map(o=>{
+    const saved=savedOffers.has(o.id);
+    const tagH=o.tags.map(t=>{
+      if(t==='retour')return'<span class="otag retour">🔄 Retour chargé</span>';
+      if(t==='urgent')return'<span class="otag urgent">⚡ Urgent J+1</span>';
+      if(t==='regulier')return'<span class="otag regulier">📅 Régulier</span>';
+      return '';
+    }).join('');
+    return `<div class="offer ${saved?'saved':''}" id="offer-${o.id}">
+      <div class="offer-r1"><div class="offer-route"><span class="city">${esc(o.from)}</span><span class="arr">→</span><span class="city">${esc(o.to)}</span></div><div class="osc ${o.match>=80?'high':'mid'}">${o.match>=80?'✓ ':''}Match ${o.match}%</div></div>
+      <div class="offer-tags">${tagH}</div>
+      <div class="offer-info"><div class="chip">📏 <strong>${o.km} km</strong></div><div class="chip">📦 <strong>${esc(o.load)}</strong></div><div class="chip">🚛 <strong>${esc(o.vehicle)}</strong></div><div class="chip">📅 <strong>${esc(o.date)}</strong></div>${o.time?`<div class="chip">⏰ <strong>${esc(o.time)}</strong></div>`:''}</div>
+      <div class="offer-bot"><div class="offer-price"><div class="amount">${o.priceLow.toLocaleString('fr-FR')} — ${o.priceHigh.toLocaleString('fr-FR')} €</div><div class="basis">${esc(o.basis)}</div></div><div class="offer-btns"><button class="ob ${saved?'saved':'save'}" onclick="toggleSave(${o.id})">${saved?'✅ Sauvé':'⭐ Sauver'}</button><button class="ob contact" onclick="contactOffer(${o.id})">📞 Contacter</button></div></div>
+    </div>`}).join('');
+  document.getElementById('feed-badge').textContent=filtered.length+' offres';
+}
+
+function toggleSave(id){
+  if(savedOffers.has(id)){savedOffers.delete(id);toast('Offre retirée des favoris','info')}
+  else{savedOffers.add(id);toast('Offre sauvegardée ⭐','ok')}
+  try{localStorage.setItem('fretnow_saved',JSON.stringify([...savedOffers]))}catch(e){}
+  renderOffers();
+}
+
+function contactOffer(id){
+  const o=OFFERS.find(x=>x.id===id);
+  if(!o)return;
+  document.getElementById('contact-body').innerHTML=`
+    <div style="background:var(--blue-bg);border-radius:8px;padding:16px;margin-bottom:16px">
+      <div style="font-weight:800;color:var(--dark);margin-bottom:4px">🚛 ${esc(o.from)} → ${esc(o.to)}</div>
+      <div style="font-size:12px;color:var(--text2)">${esc(o.load)} · ${esc(o.vehicle)} · ${esc(o.date)}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-weight:700;margin-top:8px;font-size:18px">${o.priceLow.toLocaleString('fr-FR')} — ${o.priceHigh.toLocaleString('fr-FR')} €</div>
+    </div>
+    <div style="font-size:13px;color:var(--text);margin-bottom:16px">En cliquant "Envoyer ma demande", le chargeur recevra votre profil vérifié TRANSTEK avec votre score de fiabilité (4.8/5) et vos coordonnées professionnelles.</div>
+    <div class="fg" style="margin-bottom:12px"><label>Message (optionnel)</label><textarea id="contact-msg" placeholder="Bonjour, je suis disponible pour cette mission..." style="padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font:400 13px 'DM Sans',sans-serif;min-height:80px;width:100%;background:var(--surface2)"></textarea></div>
+    <button class="tb-btn primary" style="width:100%;padding:12px" onclick="sendContact(${o.id})">📤 Envoyer ma demande</button>
+    <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:8px">🔒 Vos données sont protégées. Seul votre profil professionnel sera partagé.</div>`;
+  showModal('contact');
+}
+
+function sendContact(id){
+  const msg=document.getElementById('contact-msg');
+  if(msg&&msg.value.length>1000){toast('Message trop long (max 1000 car.)','err');return}
+  hideModal('contact');
+  toast('Demande envoyée au chargeur ✅','ok');
+  // Add to activity
+  const o=OFFERS.find(x=>x.id===id);
+  if(o)addActivity('match','📞 Demande envoyée','<strong>'+esc(o.from)+' → '+esc(o.to)+'</strong>');
+}
+
+function addActivity(type,title,detail){
+  const feed=document.getElementById('activity-feed');
+  const now=new Date();
+  const time=now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  const html=`<div class="act"><div class="act-ico ${type}">📞</div><div><div class="act-txt">${title} — ${detail}</div><div class="act-time">${time}</div></div></div>`;
+  feed.insertAdjacentHTML('afterbegin',html);
+}
+
+// ═══════════════════════════════════════
+// SHARED MISSIONS
+// ═══════════════════════════════════════
+let sharedMissions=[
+  {id:1,from:'Paris (75)',to:'Marseille (13)',km:775,load:'20 pal.',vehicle:'Semi',date:'Mar 25',price:1200,by:'Stéphane R.',score:4.6,ago:'2h'},
+  {id:2,from:'Lyon (69)',to:'Strasbourg (67)',km:490,load:'12T',vehicle:'Porteur',date:'Jeu 27',price:650,by:'Fatou D.',score:4.3,ago:'5h'},
+  {id:3,from:'Rungis (94)',to:'Nantes (44)',km:385,load:'8 pal.',vehicle:'Frigo',date:'Ven 28',price:800,by:'Karim B.',score:4.8,ago:'hier'}
+];
+let takenMissions=new Set();
+
+function renderShared(){
+  const c=document.getElementById('shared-list');
+  c.innerHTML=sharedMissions.map(m=>{
+    const taken=takenMissions.has(m.id);
+    const comm=Math.round(m.price*0.08);
+    return `<div class="sm ${taken?'taken':''}" id="sm-${m.id}">
+      <div class="sm-top"><div class="sm-route">${esc(m.from)} → ${esc(m.to)}</div><div class="sm-comm">💰 +${comm}€</div></div>
+      <div class="sm-chips"><div class="chip">📏 <strong>${m.km} km</strong></div><div class="chip">📦 <strong>${esc(m.load)}</strong></div><div class="chip">🚛 <strong>${esc(m.vehicle)}</strong></div><div class="chip">📅 <strong>${esc(m.date)}</strong></div><div class="chip">💶 <strong>${m.price.toLocaleString('fr-FR')}€</strong></div></div>
+      <div class="sm-by">Par <strong>${esc(m.by)}</strong> · ⭐ ${m.score} · ${esc(m.ago)}</div>
+      <div class="sm-btns">
+        <button class="ob ${taken?'saved':'take'}" onclick="takeMission(${m.id})" ${taken?'disabled':''}>${taken?'✅ Acceptée':'✅ Prendre'}</button>
+        <button class="ob question" onclick="questionMission(${m.id})" ${taken?'disabled':''}>💬 Question</button>
+      </div>
+    </div>`}).join('');
+}
+
+function takeMission(id){
+  if(takenMissions.has(id))return;
+  const m=sharedMissions.find(x=>x.id===id);
+  if(!m)return;
+  if(!confirm(`Confirmer la prise de mission ${m.from} → ${m.to} pour ${m.price}€ ?`))return;
+  takenMissions.add(id);
+  toast(`Mission acceptée ! ${m.from} → ${m.to}`,'ok');
+  addActivity('share','🔄 Mission prise','<strong>'+esc(m.from)+' → '+esc(m.to)+'</strong> via '+esc(m.by));
+  renderShared();
+}
+
+function questionMission(id){
+  const m=sharedMissions.find(x=>x.id===id);
+  if(!m)return;
+  const q=prompt(`Votre question pour ${m.by} à propos de ${m.from} → ${m.to} :`);
+  if(q&&q.trim()){
+    toast('Question envoyée à '+m.by+' 💬','ok');
+  }
+}
+
+function updateCommEst(){
+  const p=parseFloat(document.getElementById('sh-price').value)||0;
+  document.getElementById('comm-est').textContent='~'+Math.round(p*0.08)+'€';
+}
+
+function publishMission(){
+  const from=document.getElementById('sh-from');
+  const to=document.getElementById('sh-to');
+  const date=document.getElementById('sh-date');
+  const price=document.getElementById('sh-price');
+  let valid=true;
+  [from,to,date,price].forEach(el=>{el.classList.remove('err');if(!el.value.trim()){el.classList.add('err');valid=false}});
+  if(parseFloat(price.value)<50){price.classList.add('err');valid=false;toast('Prix minimum : 50€','err');return}
+  if(!valid){toast('Remplissez tous les champs obligatoires','err');return}
+
+  const vehicle=document.getElementById('sh-vehicle').value;
+  const load=document.getElementById('sh-load').value;
+  const p=parseFloat(price.value);
+
+  const newMission={
+    id:Date.now(),
+    from:sanitize(from.value),to:sanitize(to.value),
+    km:'—',load:sanitize(load)||'—',vehicle:sanitize(vehicle),
+    date:new Date(date.value).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}),
+    price:p,by:'Vous (TRANSTEK)',score:4.8,ago:'À l\'instant'
+  };
+  sharedMissions.unshift(newMission);
+  renderShared();
+
+  // Reset form
+  [from,to,date,price,document.getElementById('sh-load'),document.getElementById('sh-details')].forEach(el=>el.value='');
+  document.getElementById('comm-est').textContent='~0€';
+
+  toast(`Mission publiée ! Commission potentielle : ${Math.round(p*0.08)}€`,'ok');
+  addActivity('share','📤 Mission publiée','<strong>'+newMission.from+' → '+newMission.to+'</strong> · '+p+'€');
+}
+
+// ═══════════════════════════════════════
+// VEHICLE CHECK
+// ═══════════════════════════════════════
+const CHECK_SECTIONS=[
+  {key:'sec',title:'🔴 Sécurité critique',items:['Freins : fonctionnement, pas de fuite','Pneus : pression, usure, pas de hernie','Éclairage : phares, stops, clignotants, gabarits','Rétroviseurs : intacts, réglés','Direction : pas de jeu anormal','Attelage : verrouillage, béquilles'],critical:true},
+  {key:'niv',title:'🟡 Niveaux & fluides',items:['Huile moteur','Liquide de refroidissement','Lave-glace','AdBlue'],critical:false},
+  {key:'arr',title:'🟢 Chargement & arrimage',items:['Sangles / barres d\'arrimage','Plancher propre','Portes / bâche : fermeture OK','Répartition charge / essieux'],critical:false},
+  {key:'doc',title:'📋 Documents à bord',items:['Carte grise','Attestation assurance','Permis de conduire','Carte conducteur chrono'],critical:false}
+];
+
+let checkState={};
+function initCheck(){
+  CHECK_SECTIONS.forEach(s=>checkState[s.key]=0);
+  const c=document.getElementById('check-sections');
+  c.innerHTML=CHECK_SECTIONS.map(s=>`
+    <div class="ck-section">
+      <div class="ck-hd"><span>${s.title}</span><span class="prog" id="p-${s.key}">0/${s.items.length}</span></div>
+      ${s.items.map((item,i)=>`<div class="ck-item" onclick="toggleCk(this,'${s.key}')"><div class="ck-box">✓</div><div class="ck-lbl">${esc(item)}</div>${s.critical?'<div class="ck-crit">Obligatoire</div>':''}</div>`).join('')}
+    </div>`).join('');
+  updateCkTotal();
+  renderCkHistory();
+}
+
+function toggleCk(el,key){
+  el.classList.toggle('done');
+  const sec=el.closest('.ck-section');
+  checkState[key]=sec.querySelectorAll('.ck-item.done').length;
+  const total=CHECK_SECTIONS.find(s=>s.key===key).items.length;
+  document.getElementById('p-'+key).textContent=checkState[key]+'/'+total;
+  updateCkTotal();
+}
+
+function updateCkTotal(){
+  const done=Object.values(checkState).reduce((a,b)=>a+b,0);
+  const total=CHECK_SECTIONS.reduce((a,s)=>a+s.items.length,0);
+  document.getElementById('ckTotal').textContent=done+'/'+total;
+  document.getElementById('ckBtn').disabled=done<total;
+}
+
+function submitCk(){
+  if(!confirm('Valider ce check véhicule ? L\'horodatage sera archivé.'))return;
+  const now=new Date();
+  const ts=now.toLocaleDateString('fr-FR')+' à '+now.toLocaleTimeString('fr-FR');
+  const vehicle=document.getElementById('ck-vehicle').value;
+  const mission=document.getElementById('ck-mission').value;
+
+  // Save to history
+  let history=[];
+  try{history=JSON.parse(localStorage.getItem('fretnow_checks')||'[]')}catch(e){}
+  history.unshift({ts,vehicle:sanitize(vehicle),mission:sanitize(mission),points:18});
+  if(history.length>20)history=history.slice(0,20);
+  try{localStorage.setItem('fretnow_checks',JSON.stringify(history))}catch(e){}
+
+  document.getElementById('ckSubmit').innerHTML=`<div style="text-align:center;width:100%;padding:12px"><div style="font-size:28px;margin-bottom:6px">✅</div><div style="font-size:15px;font-weight:800;color:var(--dark)">Check véhicule validé !</div><div style="font-size:12px;color:var(--muted);margin-top:4px;font-family:'JetBrains Mono',monospace">${esc(ts)}</div><div style="font-size:11px;color:var(--green);font-weight:600;margin-top:6px">+5 points ajoutés au score de fiabilité</div><button class="tb-btn" style="margin-top:12px" onclick="resetCheck()">🔄 Nouveau check</button></div>`;
+
+  toast('Check véhicule validé ! +5 pts','ok');
+  addActivity('check','🔧 Check validé','<strong>'+esc(vehicle)+'</strong> — 18/18 points');
+  renderCkHistory();
+}
+
+function resetCheck(){
+  CHECK_SECTIONS.forEach(s=>checkState[s.key]=0);
+  initCheck();
+  document.getElementById('ckSubmit').innerHTML=`<div class="summary">Points : <strong id="ckTotal">0/18</strong></div><button class="tb-btn primary" id="ckBtn" onclick="submitCk()" disabled>✅ Valider le check</button>`;
+  updateCkTotal();
+}
+
+function renderCkHistory(){
+  let history=[];
+  try{history=JSON.parse(localStorage.getItem('fretnow_checks')||'[]')}catch(e){}
+  const c=document.getElementById('ck-history');
+  if(!history.length){c.innerHTML='';return}
+  c.innerHTML='<h3>📋 Historique des checks</h3>'+history.slice(0,5).map(h=>`<div class="ck-log"><span class="k">✅ ${esc(h.vehicle)} — ${esc(h.mission||'')}</span><span class="v">${esc(h.ts)}</span></div>`).join('');
+}
+
+// ═══════════════════════════════════════
+// CNR CALCULATOR
+// ═══════════════════════════════════════
+function calcCNR(){
+  const km=Math.max(1,Math.min(5000,+document.getElementById('cnr-km').value||0));
+  const fuel=Math.max(0.5,Math.min(4,+document.getElementById('cnr-fuel').value||1.52));
+  const tolls=Math.max(0,+document.getElementById('cnr-tolls').value||0);
+  const t=document.getElementById('cnr-type').value;
+  const r={semi:{c:33.5,d:.40,a:.16,m:.08,i:.05,s:.09},porteur:{c:22,d:.38,a:.14,m:.07,i:.04,s:.08},fourgon:{c:12,d:.35,a:.12,m:.05,i:.03,s:.06}}[t];
+  if(!r)return;
+  const fc=Math.round(km/100*r.c*fuel),dc=Math.round(km*r.d),ac=Math.round(km*r.a),mc=Math.round(km*r.m),ic=Math.round(km*r.i),sc=Math.round(km*r.s);
+  const tot=fc+tolls+dc+ac+mc+ic+sc;
+  const pk=km>0?(tot/km).toFixed(2):'0';
+  document.getElementById('r-fuel').textContent=fc+'€';
+  document.getElementById('r-tolls').textContent=Math.round(tolls)+'€';
+  document.getElementById('r-drv').textContent=dc+'€';
+  document.getElementById('r-amor').textContent=ac+'€';
+  document.getElementById('r-maint').textContent=mc+'€';
+  document.getElementById('r-ins').textContent=ic+'€';
+  document.getElementById('r-struct').textContent=sc+'€';
+  document.getElementById('r-total').textContent=tot.toLocaleString('fr-FR')+'€';
+  document.getElementById('r-perkm').textContent=pk.replace('.',',')+'€';
+  document.getElementById('r-sell').textContent=Math.round(tot*1.15).toLocaleString('fr-FR')+' — '+Math.round(tot*1.25).toLocaleString('fr-FR')+'€';
+}
+
+// ═══════════════════════════════════════
+// PROFILE ACTIONS (RGPD)
+// ═══════════════════════════════════════
+function exportData(){
+  const data={
+    company:'TRANSTEK',siren:'818•••962',
+    missions:47,retours:31,shared:8,commissions:'672€',
+    checks:JSON.parse(localStorage.getItem('fretnow_checks')||'[]'),
+    savedOffers:[...savedOffers],
+    exportDate:new Date().toISOString()
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='fretnow-export-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Données exportées en JSON 📥','ok');
+}
+
+function requestDeletion(){
+  if(!confirm('⚠️ Êtes-vous sûr de vouloir demander la suppression de toutes vos données ? Cette action est irréversible.')){return}
+  if(!confirm('Dernière confirmation : supprimer définitivement votre compte FRETNOW et toutes les données associées ?')){return}
+  try{localStorage.removeItem('fretnow_saved');localStorage.removeItem('fretnow_checks');localStorage.removeItem('fretnow_rgpd')}catch(e){}
+  toast('Demande de suppression envoyée. Traitement sous 30 jours.','warn',5000);
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+renderFilters();
+renderOffers();
+renderShared();
+initCheck();
+calcCNR();
+
+// Security: prevent devtools paste attacks
+if(window.console){const w=console.warn;console.warn=function(){w.apply(console,arguments)};console.log('%c⚠️ FRETNOW SECURITY','font-size:20px;color:red;font-weight:bold');console.log('%cNe collez jamais de code ici. Un attaquant pourrait voler vos données.','font-size:14px;color:#333')}
+</script>
+</body>
+</html>

@@ -49,7 +49,12 @@ const useAuth = () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Erreur de connexion");
     setUser(data.user); setToken(data.accessToken);
-    try { localStorage.setItem("fn_token", data.accessToken); localStorage.setItem("fn_user", JSON.stringify(data.user)); } catch (e) {}
+    try { localStorage.setItem("fn_token", data.accessToken); localStorage.setItem("fn_user", JSON.stringify(data.user)); if(data.refreshToken) localStorage.setItem("fn_refresh", data.refreshToken); } catch (e) {}
+    // Redirect to role-based dashboard
+    const role = data.user?.role;
+    if (role === 'TRANSPORTEUR') { window.location.href = '/transporteur.html'; return data; }
+    if (role === 'CHARGEUR') { window.location.href = '/chargeur.html'; return data; }
+    // SUPER_ADMIN stays on app.html (admin dashboard)
     return data;
   };
 
@@ -61,7 +66,10 @@ const useAuth = () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || data.details?.map(d => d.message).join(", ") || "Erreur d'inscription");
     setUser(data.user); setToken(data.accessToken);
-    try { localStorage.setItem("fn_token", data.accessToken); localStorage.setItem("fn_user", JSON.stringify(data.user)); } catch (e) {}
+    try { localStorage.setItem("fn_token", data.accessToken); localStorage.setItem("fn_user", JSON.stringify(data.user)); if(data.refreshToken) localStorage.setItem("fn_refresh", data.refreshToken); } catch (e) {}
+    const role = data.user?.role;
+    if (role === 'TRANSPORTEUR') { window.location.href = '/transporteur.html'; return data; }
+    if (role === 'CHARGEUR') { window.location.href = '/chargeur.html'; return data; }
     return data;
   };
 
