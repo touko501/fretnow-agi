@@ -33,7 +33,7 @@ const uploadLimiter = rateLimit({
 });
 
 function applySecurity(app) {
-  app.use(helmet({ contentSecurityPolicy: env.NODE_ENV === 'production', crossOriginEmbedderPolicy: false }));
+  app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
   app.use(cors(corsOptions));
   app.use(compression());
   app.use(globalLimiter);
