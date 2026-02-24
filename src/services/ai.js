@@ -4,9 +4,9 @@
  */
 
 const prisma = require('../config/database');
-const PricingAgent = require('../../agents/pricing');
-const MatcherAgent = require('../../agents/matcher');
-const RiskAgent = require('../../agents/risk');
+const { PricingAgent } = require('../../agents/pricing');
+const { MatcherAgent } = require('../../agents/matcher');
+const { RiskAgent } = require('../../agents/risk');
 
 // Instancier les agents
 const pricingAgent = new PricingAgent();
