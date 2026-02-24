@@ -202,8 +202,7 @@ model User {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   lastLoginAt     DateTime?
-  REJECTED
-  DELETEDAt       DateTime?
+  deletedAt       DateTime?
 
   missionsAsClient      Mission[]         @relation("ClientMissions")
   bids                  Bid[]
@@ -442,8 +441,7 @@ model Mission {
 
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
-  REJECTED
-  DELETEDAt             DateTime?
+  deletedAt             DateTime?
 
   bids                  Bid[]
   ratings               Rating[]
