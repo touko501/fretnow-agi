@@ -12,7 +12,12 @@ async function seed() {
     // Check if already seeded
     const check = await client.query('SELECT COUNT(*) FROM "User"');
     if (parseInt(check.rows[0].count) > 0) {
-      console.log(`DB already has ${check.rows[0].count} users — skipping seed.`);
+      console.log(`DB already has ${check.rows[0].count} users — updating admin password...`);
+      // Always update admin password to ensure it works
+      const bcrypt = require('bcryptjs');
+      const adminHash = bcrypt.hashSync('admin123', 12);
+      await client.query('UPDATE "User" SET "passwordHash" = $1 WHERE email = $2', [adminHash, 'admin@fretnow.com']);
+      console.log('Admin password updated to admin123');
       return;
     }
 

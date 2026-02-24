@@ -65,7 +65,7 @@ INSERT INTO "Company" (id, type, name, "tradeName", siren, siret, "tvaIntra", na
 
 -- ═══ USERS FRETNOW TEAM ═══
 INSERT INTO "User" (id, email, "passwordHash", "firstName", "lastName", phone, role, status, "emailVerified", "kycVerified", "companyId") VALUES
-('u-admin', 'admin@fretnow.com', '$2b$12$LJ3FxVqH7xKPYfQJJUk.5OcmqZHZKH7P5cPXfWKx3R2S1g5Eu5YrC', 'Admin', 'FRETNOW', '+33155667788', 'SUPER_ADMIN', 'ACTIVE', true, true, 'co-fretnow'),
+('u-admin', 'admin@fretnow.com', '$2b$12$7zBsoNH1EzzU63FZ3XEcEOFdOCKW/cd9Bxg9gf2vzog1N1cflNMTG', 'Admin', 'FRETNOW', '+33155667788', 'SUPER_ADMIN', 'ACTIVE', true, true, 'co-fretnow'),
 ('u-tarek', 'tarek@fretnow.com', '$2b$12$LJ3FxVqH7xKPYfQJJUk.5OcmqZHZKH7P5cPXfWKx3R2S1g5Eu5YrC', 'Tarek', 'JAZIRI', '+33612345678', 'ADMIN', 'ACTIVE', true, true, 'co-fretnow'),
 ('u-support', 'support@fretnow.com', '$2b$12$LJ3FxVqH7xKPYfQJJUk.5OcmqZHZKH7P5cPXfWKx3R2S1g5Eu5YrC', 'Support', 'FRETNOW', '+33155667789', 'ADMIN', 'ACTIVE', true, true, 'co-fretnow');
 
