@@ -4,7 +4,7 @@
   "description": "FRETNOW AGI — API Marketplace Fret Routier B2B",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node seed.js && node src/index.js",
     "dev": "nodemon src/index.js",
     "db:generate": "npx prisma generate",
     "db:migrate": "npx prisma migrate deploy",
