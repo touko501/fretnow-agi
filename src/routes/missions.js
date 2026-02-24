@@ -147,7 +147,23 @@ router.put('/:id', authenticate, isChargeur, async (req, res) => {
     if (mission.clientId !== req.user.id) return res.status(403).json({ error: 'Accès interdit' });
     if (mission.status !== 'DRAFT') return res.status(400).json({ error: 'Modification impossible: mission déjà publiée' });
 
-    const updated = await prisma.mission.update({ where: { id: req.params.id }, data: req.body });
+    // Filtrer les champs modifiables (SÉCURITÉ)
+    const { pickupAddress, pickupCity, pickupPostalCode, pickupContact, pickupPhone, pickupInstructions,
+      pickupDateRequested, pickupTimeWindow, deliveryAddress, deliveryCity, deliveryPostalCode,
+      deliveryContact, deliveryPhone, deliveryInstructions, deliveryDateRequested, deliveryTimeWindow,
+      goodsDescription, goodsValue, weightKg, volumeM3, palletCount, vehicleTypeRequired,
+      isStackable, isFragile, requiresTemp, tempMin, tempMax, isADR, adrClass, unNumber,
+      budgetMaxCents, conditions, notes } = req.body;
+    const updated = await prisma.mission.update({ where: { id: req.params.id }, data: {
+      pickupAddress, pickupCity, pickupPostalCode, pickupContact, pickupPhone, pickupInstructions,
+      pickupDateRequested: pickupDateRequested ? new Date(pickupDateRequested) : undefined,
+      pickupTimeWindow, deliveryAddress, deliveryCity, deliveryPostalCode,
+      deliveryContact, deliveryPhone, deliveryInstructions,
+      deliveryDateRequested: deliveryDateRequested ? new Date(deliveryDateRequested) : undefined,
+      deliveryTimeWindow, goodsDescription, goodsValue, weightKg, volumeM3, palletCount,
+      vehicleTypeRequired, isStackable, isFragile, requiresTemp, tempMin, tempMax,
+      isADR, adrClass, unNumber, budgetMaxCents, conditions, notes
+    }});
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' });

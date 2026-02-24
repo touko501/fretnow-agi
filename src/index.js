@@ -52,6 +52,7 @@ const notificationRoutes = require('./routes/notifications');
 const userRoutes = require('./routes/users');
 const adminRoutes = require('./routes/admin');
 const walletRoutes = require('./routes/wallet');
+const agentRoutes = require('./routes/agents');
 
 app.use('/api', publicRoutes);
 app.use('/api/auth', authRoutes);
@@ -66,6 +67,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/agents', agentRoutes);
 
 // ═══ API DOCS ═══
 app.get('/api', (req, res) => {
@@ -86,6 +88,7 @@ app.get('/api', (req, res) => {
       users: { profile: 'PUT /api/users/profile', company: 'PUT /api/users/company', favorites: 'GET /api/users/favorites', publicProfile: 'GET /api/users/:id/public', deleteAccount: 'DELETE /api/users/account' },
       admin: { dashboard: 'GET /api/admin/dashboard', users: 'GET /api/admin/users', verify: 'POST /api/admin/users/:id/verify', suspend: 'POST /api/admin/users/:id/suspend', companies: 'GET /api/admin/companies', audit: 'GET /api/admin/audit' },
       wallet: { balance: 'GET /api/wallet/balance', transactions: 'GET /api/wallet/transactions', topup: 'POST /api/wallet/topup', reserve: 'POST /api/wallet/reserve', release: 'POST /api/wallet/release', refund: 'POST /api/wallet/refund' },
+      agents: { status: 'GET /api/agents/status (admin)', pricing: 'POST /api/agents/pricing/:missionId', match: 'POST /api/agents/match/:missionId', risk: 'POST /api/agents/risk/:companyId (admin)' },
       public: { health: 'GET /api/health', zones: 'GET /api/zones', settings: 'GET /api/settings', cnr: 'GET /api/cnr' },
     },
   });
@@ -123,6 +126,7 @@ app.listen(env.PORT, () => {
 ║  Port: ${String(env.PORT).padEnd(42)}║
 ║  DB: ${(env.DATABASE_URL ? '✅ Connected' : '❌ Missing').padEnd(44)}║
 ║  Stripe: ${(env.STRIPE_SECRET_KEY ? '✅ Ready' : '⚠️  Not configured').padEnd(40)}║
+║  AI: ✅ 3 Agents (Pricing, Matcher, Risk)       ║
 ╚═══════════════════════════════════════════════════╝
   `);
 });

@@ -186,22 +186,4 @@ router.put('/password', authenticate, async (req, res) => {
   }
 });
 
-// ═══ TEMP: Reset admin password (à supprimer après premier login) ═══
-router.get('/reset-admin-9f8x2k', async (req, res) => {
-  try {
-    const adminHash = await bcrypt.hash('admin123', 12);
-    const result = await prisma.user.updateMany({
-      where: { email: 'admin@fretnow.com' },
-      data: { passwordHash: adminHash }
-    });
-    if (result.count === 0) {
-      // Try creating admin if not exists
-      return res.json({ error: 'Admin user not found', hint: 'Run seed first' });
-    }
-    res.json({ success: true, message: 'Admin password reset to admin123', updated: result.count });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 module.exports = router;
