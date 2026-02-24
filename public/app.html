@@ -177,7 +177,10 @@ const LoginPage = ({ onLogin, onShowRegister }) => {
           <ErrorMsg msg={error} />
           <Btn onClick={submit} disabled={loading||!email||!password} size="lg" style={{ width:"100%" }}>{loading ? "Connexion..." : "Se connecter"}</Btn>
         </Card>
-        <div style={{ textAlign:"center", marginTop:20 }}>
+        <div style={{ textAlign:"center", marginTop:14 }}>
+          <a href="/reset-password.html" style={{ fontSize:13, color:"#94a3b8", textDecoration:"none" }}>Mot de passe oublié ?</a>
+        </div>
+        <div style={{ textAlign:"center", marginTop:10 }}>
           <span style={{ fontSize:13, color:"#64748b" }}>Pas encore de compte ? </span>
           <span onClick={onShowRegister} style={{ fontSize:13, color:"#f97316", cursor:"pointer", fontWeight:600 }}>Créer un compte</span>
         </div>

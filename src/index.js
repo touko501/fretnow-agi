@@ -76,7 +76,7 @@ app.get('/api', (req, res) => {
     version: '6.1.0',
     status: 'running',
     endpoints: {
-      auth: { register: 'POST /api/auth/register', login: 'POST /api/auth/login', me: 'GET /api/auth/me', refresh: 'POST /api/auth/refresh', logout: 'POST /api/auth/logout', password: 'PUT /api/auth/password' },
+      auth: { register: 'POST /api/auth/register', login: 'POST /api/auth/login', me: 'GET /api/auth/me', refresh: 'POST /api/auth/refresh', logout: 'POST /api/auth/logout', password: 'PUT /api/auth/password', forgotPassword: 'POST /api/auth/forgot-password', resetPassword: 'POST /api/auth/reset-password' },
       missions: { list: 'GET /api/missions', create: 'POST /api/missions', detail: 'GET /api/missions/:id', update: 'PUT /api/missions/:id', publish: 'POST /api/missions/:id/publish', assign: 'POST /api/missions/:id/assign', status: 'POST /api/missions/:id/status', delete: 'DELETE /api/missions/:id' },
       bids: { create: 'POST /api/bids', mine: 'GET /api/bids/mine', withdraw: 'DELETE /api/bids/:id' },
       documents: { upload: 'POST /api/documents/upload', list: 'GET /api/documents', download: 'GET /api/documents/:id/download', verify: 'POST /api/documents/:id/verify (admin)', expiring: 'GET /api/documents/expiring/soon (admin)' },
