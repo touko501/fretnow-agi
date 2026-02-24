@@ -411,14 +411,14 @@ const Sidebar = ({ user, page, setPage, logout }) => {
     ...(isChargeur ? [{ key:"wallet", icon:"💳", label:"Portefeuille" }] : []),
     ...(isTransporteur ? [{ key:"vehicles", icon:"🚚", label:"Véhicules" }, { key:"drivers", icon:"👷", label:"Conducteurs" }] : []),
     { key:"notifications", icon:"🔔", label:"Notifications" },
-    ...(isAdmin ? [{ key:"wallet", icon:"💳", label:"Finances" }, { key:"admin-users", icon:"👥", label:"Utilisateurs" }, { key:"admin-companies", icon:"🏢", label:"Entreprises" }] : []),
+    ...(isAdmin ? [{ key:"wallet", icon:"💳", label:"Finances" }, { key:"admin-users", icon:"👥", label:"Utilisateurs" }, { key:"admin-companies", icon:"🏢", label:"Entreprises" }, { key:"admin-agents", icon:"🤖", label:"Agents IA" }] : []),
   ];
 
   return (
     <div style={{ width:240, minHeight:"100vh", background:"rgba(0,0,0,0.3)", borderRight:"1px solid rgba(255,255,255,0.06)", padding:"20px 0", display:"flex", flexDirection:"column", flexShrink:0 }}>
       <div style={{ padding:"0 20px", marginBottom:32 }}>
         <div style={{ fontSize:26, fontWeight:900 }}><span style={{ color:"#f97316" }}>FRET</span><span style={{ color:"#e2e8f0" }}>NOW</span></div>
-        <div style={{ fontSize:10, color:"#475569", marginTop:2 }}>v6.0 — Production</div>
+        <div style={{ fontSize:10, color:"#475569", marginTop:2 }}>v6.1 — Production</div>
       </div>
       <nav style={{ flex:1, padding:"0 10px" }}>
         {items.map(i => (
@@ -853,8 +853,9 @@ const AdminUsersPage = ({ api }) => {
   const [l, sL] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
   const [msg, setMsg] = useState("");
+  const [filter, setFilter] = useState("all");
 
-  const loadUsers = () => { sL(true); api("/admin/users").then(sD).catch(console.error).finally(() => sL(false)); };
+  const loadUsers = () => { sL(true); api("/admin/users?limit=100").then(sD).catch(console.error).finally(() => sL(false)); };
   useEffect(() => { loadUsers(); }, [api]);
 
   const doAction = async (id, action, label) => {
@@ -874,12 +875,26 @@ const AdminUsersPage = ({ api }) => {
   const roleIcons = { SUPER_ADMIN:"\ud83d\udd34", ADMIN:"\ud83d\udfe0", TRANSPORTEUR:"\ud83d\udfe2", CHARGEUR:"\ud83d\udfe1" };
   const roleLabels = { SUPER_ADMIN:"Admin", ADMIN:"Admin", TRANSPORTEUR:"Transporteur", CHARGEUR:"Chargeur" };
 
+  const filteredUsers = (d.users || []).filter(u => {
+    if (filter === "all") return true;
+    if (filter === "pending") return u.status === "PENDING_VERIFICATION";
+    if (filter === "transporteur") return u.role === "TRANSPORTEUR";
+    if (filter === "chargeur") return u.role === "CHARGEUR";
+    if (filter === "admin") return ["ADMIN","SUPER_ADMIN"].includes(u.role);
+    return true;
+  });
+
   return (
     <div>
       <h1 style={{ fontSize:24, fontWeight:800, marginBottom:8 }}>Utilisateurs ({d.pagination?.total||d.users?.length})</h1>
       {msg && <SuccessMsg msg={msg} />}
-      <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:16 }}>
-        {d.users?.map(u => {
+      <div style={{ display:"flex", gap:8, marginTop:12, marginBottom:16, flexWrap:"wrap" }}>
+        {[{k:"all",l:"Tous"},{k:"pending",l:"⏳ En attente"},{k:"transporteur",l:"🚛 Transporteurs"},{k:"chargeur",l:"📦 Chargeurs"},{k:"admin",l:"🔴 Admins"}].map(f => (
+          <span key={f.k} onClick={() => setFilter(f.k)} style={{ padding:"6px 14px", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer", background:filter===f.k?"rgba(249,115,22,0.15)":"rgba(255,255,255,0.04)", color:filter===f.k?"#f97316":"#94a3b8", border:`1px solid ${filter===f.k?"rgba(249,115,22,0.3)":"rgba(255,255,255,0.08)"}` }}>{f.l}</span>
+        ))}
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        {filteredUsers.map(u => {
           const isPending = u.status === "PENDING_VERIFICATION";
           const isActive = u.status === "ACTIVE";
           const isSelf = u.role === "SUPER_ADMIN";
@@ -966,6 +981,49 @@ const AdminCompaniesPage = ({ api }) => {
   );
 };
 
+// ═══ ADMIN AGENTS PAGE ═══
+const AdminAgentsPage = ({ api }) => {
+  const [agents, setAgents] = useState(null);
+  const [l, sL] = useState(true);
+  useEffect(() => { api("/agents/status").then(setAgents).catch(console.error).finally(() => sL(false)); }, [api]);
+  if (l) return <Spinner />;
+  if (!agents) return <Card><div style={{ textAlign:"center", color:"#64748b", padding:20 }}>Erreur de chargement</div></Card>;
+
+  return (
+    <div>
+      <h1 style={{ fontSize:24, fontWeight:800, marginBottom:8 }}>🤖 Agents IA</h1>
+      <p style={{ color:"#64748b", fontSize:13, marginBottom:24 }}>Statut des agents autonomes connectés à la plateforme</p>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(300px, 1fr))", gap:14 }}>
+        {agents.agents?.map(a => (
+          <Card key={a.name}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+              <div style={{ fontSize:18, fontWeight:800, color:"#e2e8f0" }}>
+                {a.name === "PRICING" ? "💰" : a.name === "MATCHER" ? "🤖" : "🛡️"} {a.name}
+              </div>
+              <span style={{ padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, background:a.status==="active"?"rgba(34,197,94,0.15)":"rgba(148,163,184,0.15)", color:a.status==="active"?"#22c55e":"#94a3b8" }}>
+                {a.status === "active" ? "✅ Actif" : "⏸ En attente"}
+              </span>
+            </div>
+            <div style={{ fontSize:12, color:"#94a3b8" }}>
+              {a.name === "PRICING" && `Devis générés: ${a.stats?.quotesGenerated || 0} | Prix moyen: ${Math.round(a.stats?.averagePrice || 0)}€`}
+              {a.name === "MATCHER" && `Matchs: ${a.stats?.matchesCreated || 0} | Acceptés: ${a.stats?.matchesAccepted || 0} | Rejetés: ${a.stats?.matchesRejected || 0}`}
+              {a.name === "RISK" && `Évaluations: ${a.stats?.assessments || 0} | Fraudes: ${a.stats?.fraudsDetected || 0} | Alertes: ${a.stats?.alertsGenerated || 0}`}
+            </div>
+          </Card>
+        ))}
+      </div>
+      <Card style={{ marginTop:20 }}>
+        <div style={{ fontSize:12, color:"#64748b" }}>
+          <strong>Endpoints disponibles :</strong><br/>
+          POST /api/agents/pricing/:missionId — Estimer un prix<br/>
+          POST /api/agents/match/:missionId — Trouver transporteurs<br/>
+          POST /api/agents/risk/:companyId — Évaluer risque entreprise
+        </div>
+      </Card>
+    </div>
+  );
+};
+
 // ═══ MAIN APP ═══
 function App() {
   const auth = useAuth();
@@ -994,6 +1052,7 @@ function App() {
       case "notifications": return <NotificationsPage api={auth.api} />;
       case "admin-users": return <AdminUsersPage api={auth.api} />;
       case "admin-companies": return <AdminCompaniesPage api={auth.api} />;
+      case "admin-agents": return <AdminAgentsPage api={auth.api} />;
       default: return <Dashboard api={auth.api} user={auth.user} />;
     }
   };

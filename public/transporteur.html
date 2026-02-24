@@ -376,7 +376,7 @@ function logout() {
   <div class="sb-brand"><svg width="28" height="28" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="11" fill="url(#lg1)"/><path d="M10 28h6V18h10l6 6v4h4a3 3 0 010 6h-2a4 4 0 01-8 0h-8a4 4 0 01-8 0z" fill="rgba(255,255,255,.95)"/><circle cx="18" cy="34" r="2.5" fill="url(#lg1)"/><circle cx="30" cy="34" r="2.5" fill="url(#lg1)"/><rect x="8" y="16" width="6" height="1.5" rx=".75" fill="rgba(255,255,255,.5)"/><rect x="6" y="20" width="8" height="1.5" rx=".75" fill="rgba(255,255,255,.4)"/><defs><linearGradient id="lg1" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse"><stop stop-color="#0D9488"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs></svg><span>FRET<span style="background:linear-gradient(135deg,#0D9488,#2563EB);-webkit-background-clip:text;-webkit-text-fill-color:transparent">NOW</span></span><span class="pro">PRO</span></div>
   <nav class="sb-nav">
     <div class="sb-item active" data-tab="dash" onclick="go('dash',this)"><span class="ico">📊</span>Tableau de bord</div>
-    <div class="sb-item" data-tab="feed" onclick="go('feed',this)"><span class="ico">🚛</span>Bourse de fret<span class="pill red" id="feed-count">5</span></div>
+    <div class="sb-item" data-tab="feed" onclick="go('feed',this)"><span class="ico">🚛</span>Bourse de fret<span class="pill red" id="feed-count" style="display:none">0</span></div>
     <div class="sb-item" data-tab="share" onclick="go('share',this)"><span class="ico">🔄</span>Partage missions<span class="pill new">new</span></div>
     <div class="sb-item" data-tab="check" onclick="go('check',this)"><span class="ico">🔧</span>Check véhicule</div>
     <div class="sb-item" data-tab="cnr" onclick="go('cnr',this)"><span class="ico">🧮</span>Calculateur CNR</div>
@@ -384,7 +384,7 @@ function logout() {
     <div class="sb-item" data-tab="profile" onclick="go('profile',this)"><span class="ico">👤</span>Mon profil</div>
   </nav>
   <div class="sb-fuel"><div class="pulse"></div>⛽ Gazole : 1,52 €/L</div>
-  <div class="sb-user"><div class="sb-avatar">TJ</div><div><div class="name">TRANSTEK</div><div class="sub">Tarek Jaziri · IDF</div></div></div>
+  <div class="sb-user"><div class="sb-avatar">--</div><div><div class="name">Chargement...</div><div class="sub">—</div></div></div>
 <div class="sb-fuel" onclick="logout()" style="background:#2a0a0a;color:#ef4444;cursor:pointer">🚪 Déconnexion</div>
 </aside>
 
@@ -398,10 +398,10 @@ function logout() {
   </div>
   <div class="content">
     <div class="kpi-row">
-      <div class="kpi"><div class="label">Missions ce mois</div><div class="val" id="kpi-missions">12</div><div class="delta up">↑ +3 vs mois dernier</div></div>
-      <div class="kpi"><div class="label">Retours chargés</div><div class="val">8</div><div class="delta up">↑ 67% remplissage</div></div>
-      <div class="kpi"><div class="label">Commissions partagées</div><div class="val" style="color:var(--green)" id="kpi-comm">384€</div><div class="delta up">↑ 4 missions</div></div>
-      <div class="kpi"><div class="label">Score fiabilité</div><div class="val" style="color:var(--purple)" id="kpi-score">4.8</div><div class="delta up">Top 15%</div></div>
+      <div class="kpi"><div class="label">Missions ce mois</div><div class="val" id="kpi-missions">0</div><div class="delta" id="kpi-missions-delta">—</div></div>
+      <div class="kpi"><div class="label">Retours chargés</div><div class="val" id="kpi-retours">0</div><div class="delta" id="kpi-retours-delta">—</div></div>
+      <div class="kpi"><div class="label">Commissions partagées</div><div class="val" style="color:var(--green)" id="kpi-comm">0€</div><div class="delta" id="kpi-comm-delta">—</div></div>
+      <div class="kpi"><div class="label">Score fiabilité</div><div class="val" style="color:var(--purple)" id="kpi-score">—</div><div class="delta" id="kpi-score-delta">Nouveau compte</div></div>
     </div>
     <div class="dash-cols">
       <div class="card">
