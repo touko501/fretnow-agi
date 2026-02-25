@@ -217,6 +217,7 @@ model User {
   disputesOpened        Dispute[]         @relation("DisputeOpener")
   favoritesGiven        Favorite[]        @relation("FavGiven")
   favoritesReceived     Favorite[]        @relation("FavReceived")
+  sharedRoutes          SharedRoute[]
 
   @@index([email])
   @@index([role, status])
@@ -972,6 +973,46 @@ model CnrIndex {
 
   @@unique([month])
   @@index([month])
+}
+
+// PARTAGE DE COURSES — Retours à charge
+
+model SharedRoute {
+  id                String      @id @default(cuid())
+  userId            String
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId         String?
+  
+  departureAddress  String?
+  departureCity     String
+  departurePostalCode String?
+  departureLat      Float?
+  departureLon      Float?
+  
+  arrivalAddress    String?
+  arrivalCity       String
+  arrivalPostalCode String?
+  arrivalLat        Float?
+  arrivalLon        Float?
+  
+  departureDate     DateTime
+  vehicleType       String?
+  availableWeightKg Float?
+  availablePallets  Int?
+  availableVolumeM3 Float?
+  notes             String?
+  
+  status            String      @default("ACTIVE")   // ACTIVE, EXPIRED, CANCELLED, BOOKED
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  expiresAt         DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@index([departureCity])
+  @@index([arrivalCity])
+  @@index([departureDate])
 }
 
 // CONFIGURATION PLATEFORME

@@ -53,6 +53,7 @@ const userRoutes = require('./routes/users');
 const adminRoutes = require('./routes/admin');
 const walletRoutes = require('./routes/wallet');
 const agentRoutes = require('./routes/agents');
+const sharedRouteRoutes = require('./routes/shared-routes');
 
 app.use('/api', publicRoutes);
 app.use('/api/auth', authRoutes);
@@ -68,12 +69,13 @@ app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/agents', agentRoutes);
+app.use('/api/shared-routes', sharedRouteRoutes);
 
 // ═══ API DOCS ═══
 app.get('/api', (req, res) => {
   res.json({
     name: 'FRETNOW AGI API',
-    version: '6.1.0',
+    version: '7.2.0',
     status: 'running',
     endpoints: {
       auth: { register: 'POST /api/auth/register', login: 'POST /api/auth/login', me: 'GET /api/auth/me', refresh: 'POST /api/auth/refresh', logout: 'POST /api/auth/logout', password: 'PUT /api/auth/password', forgotPassword: 'POST /api/auth/forgot-password', resetPassword: 'POST /api/auth/reset-password' },
