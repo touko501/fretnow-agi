@@ -7,1062 +7,957 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚛</text></svg>"/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'DM Sans', sans-serif; background: #070d17; color: #e2e8f0; -webkit-font-smoothing: antialiased; }
-    #root { min-height: 100vh; }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-    ::selection { background: rgba(249,115,22,0.3); }
-    @keyframes spin { to { transform: rotate(360deg) } }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'DM Sans',sans-serif;background:#070d17;color:#e2e8f0;-webkit-font-smoothing:antialiased}
+    ::-webkit-scrollbar{width:6px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+    ::selection{background:rgba(249,115,22,0.3)}
+    @keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    .fade-up{animation:fadeUp .35s ease-out}
+    @media(max-width:768px){.sidebar-desk{display:none!important}.mob-header{display:flex!important}.mob-sb{display:flex!important;position:fixed;left:0;top:0;z-index:100;width:260px;box-shadow:4px 0 20px rgba(0,0,0,.5)}.mob-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}}
+    @media(min-width:769px){.mob-header{display:none!important}.mob-overlay{display:none!important}}
+    textarea{font-family:inherit;resize:vertical}
   </style>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
-  <div id="root"></div>
-  <script type="text/babel">
-const { useState, useEffect, useCallback, useRef } = React;
-const API = window.location.origin + "/api";
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback,useRef}=React;
+const API=window.location.origin+"/api";
 
-// ═══ AUTH HOOK ═══
-const useAuth = () => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    try {
-      const t = localStorage.getItem("fn_token");
-      const u = localStorage.getItem("fn_user");
-      if (t && u) { setToken(t); setUser(JSON.parse(u)); }
-    } catch (e) {}
-    setLoading(false);
-  }, []);
-
-  const login = async (email, password) => {
-    const res = await fetch(`${API}/auth/login`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Erreur de connexion");
-    setUser(data.user); setToken(data.accessToken);
-    try { localStorage.setItem("fn_token", data.accessToken); localStorage.setItem("fn_user", JSON.stringify(data.user)); if(data.refreshToken) localStorage.setItem("fn_refresh", data.refreshToken); } catch (e) {}
-    // Redirect to role-based dashboard
-    const role = data.user?.role;
-    if (role === 'TRANSPORTEUR') { window.location.href = '/transporteur.html'; return data; }
-    if (role === 'CHARGEUR') { window.location.href = '/chargeur.html'; return data; }
-    // SUPER_ADMIN stays on app.html (admin dashboard)
-    return data;
-  };
-
-  const register = async (formData) => {
-    const res = await fetch(`${API}/auth/register`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || data.details?.map(d => d.message).join(", ") || "Erreur d'inscription");
-    setUser(data.user); setToken(data.accessToken);
-    try { localStorage.setItem("fn_token", data.accessToken); localStorage.setItem("fn_user", JSON.stringify(data.user)); if(data.refreshToken) localStorage.setItem("fn_refresh", data.refreshToken); } catch (e) {}
-    const role = data.user?.role;
-    if (role === 'TRANSPORTEUR') { window.location.href = '/transporteur.html'; return data; }
-    if (role === 'CHARGEUR') { window.location.href = '/chargeur.html'; return data; }
-    return data;
-  };
-
-  const logout = () => {
-    setUser(null); setToken(null);
-    try { localStorage.removeItem("fn_token"); localStorage.removeItem("fn_user"); } catch (e) {}
-  };
-
-  const api = useCallback(async (path, opts = {}) => {
-    const res = await fetch(`${API}${path}`, {
-      ...opts,
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...opts.headers },
-    });
-    const data = await res.json();
-    if (res.status === 401) { logout(); throw new Error("Session expirée"); }
-    if (!res.ok) throw new Error(data.error || "Erreur serveur");
-    return data;
-  }, [token]);
-
-  return { user, token, login, register, logout, api, loading };
+/* ═══ AUTH ═══ */
+const useAuth=()=>{
+  const[user,setUser]=useState(null);const[token,setToken]=useState(null);const[loading,setLoading]=useState(true);
+  useEffect(()=>{try{const t=localStorage.getItem("fn_token"),u=localStorage.getItem("fn_user");if(t&&u){setToken(t);setUser(JSON.parse(u))}}catch(e){}setLoading(false)},[]);
+  const save=(t,u)=>{setToken(t);setUser(u);try{localStorage.setItem("fn_token",t);localStorage.setItem("fn_user",JSON.stringify(u))}catch(e){}};
+  const login=async(email,pw)=>{const r=await fetch(`${API}/auth/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password:pw})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Erreur");save(d.accessToken,d.user);return d};
+  const register=async(f)=>{const r=await fetch(`${API}/auth/register`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(f)});const d=await r.json();if(!r.ok)throw new Error(d.error||d.details?.map(x=>x.message).join(", ")||"Erreur");save(d.accessToken,d.user);return d};
+  const logout=()=>{setUser(null);setToken(null);try{localStorage.removeItem("fn_token");localStorage.removeItem("fn_user");localStorage.removeItem("fn_refresh")}catch(e){}};
+  const api=useCallback(async(path,opts={})=>{const r=await fetch(`${API}${path}`,{...opts,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{}),...opts.headers}});const d=await r.json();if(r.status===401){logout();throw new Error("Session expirée")}if(!r.ok)throw new Error(d.error||"Erreur serveur");return d},[token]);
+  const refreshUser=useCallback(async()=>{if(!token)return;try{const d=await api("/auth/me");const u=d.user||d;setUser(u);try{localStorage.setItem("fn_user",JSON.stringify(u))}catch(e){}}catch(e){}},[token,api]);
+  return{user,token,login,register,logout,api,loading,refreshUser};
 };
 
-// ═══ UTILS ═══
-const fmt = (c) => c != null ? (c / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" }) : "—";
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) : "—";
-const fmtDateTime = (d) => d ? new Date(d).toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
+/* ═══ UTILS ═══ */
+const fmt=c=>c!=null?(c/100).toLocaleString("fr-FR",{style:"currency",currency:"EUR"}):"—";
+const fmtDate=d=>d?new Date(d).toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"}):"—";
+const fmtShort=d=>d?new Date(d).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"}):"—";
+const fmtDT=d=>d?new Date(d).toLocaleString("fr-FR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):"—";
+const timeAgo=d=>{if(!d)return"";const s=Math.floor((Date.now()-new Date(d))/1000);if(s<60)return"à l'instant";if(s<3600)return`il y a ${Math.floor(s/60)}min`;if(s<86400)return`il y a ${Math.floor(s/3600)}h`;return`il y a ${Math.floor(s/86400)}j`};
+const kms=d=>d!=null?`${Math.round(d)} km`:"—";
 
-const statusColors = { DRAFT:"#374151", PUBLISHED:"#1e3a5f", BIDDING:"#4c1d95", ASSIGNED:"#713f12", ACCEPTED:"#164e63", PICKUP:"#7c2d12", IN_TRANSIT:"#14532d", DELIVERED:"#064e3b", COMPLETED:"#052e16", CANCELLED:"#450a0a", DISPUTED:"#78350f", PENDING:"#1e3a5f", EXPIRED:"#374151", REJECTED:"#450a0a", WITHDRAWN:"#374151" };
-const statusTextColors = { DRAFT:"#d1d5db", PUBLISHED:"#60a5fa", BIDDING:"#c4b5fd", ASSIGNED:"#fbbf24", ACCEPTED:"#22d3ee", PICKUP:"#fb923c", IN_TRANSIT:"#4ade80", DELIVERED:"#34d399", COMPLETED:"#22c55e", CANCELLED:"#f87171", DISPUTED:"#f59e0b", PENDING:"#93c5fd", EXPIRED:"#9ca3af", REJECTED:"#fca5a5", WITHDRAWN:"#6b7280" };
-const statusLabels = { DRAFT:"Brouillon", PUBLISHED:"Publiée", BIDDING:"Enchères", ASSIGNED:"Attribuée", ACCEPTED:"Acceptée", PICKUP:"Enlèvement", IN_TRANSIT:"En route", DELIVERED:"Livrée", COMPLETED:"Terminée", CANCELLED:"Annulée", DISPUTED:"Litige", PENDING:"En attente", EXPIRED:"Expirée", REJECTED:"Refusée", WITHDRAWN:"Retirée" };
-const vehicleLabels = { FOURGON_3T5:"Fourgon 3.5T", FOURGON_12M3:"Fourgon 12m³", FOURGON_20M3:"Fourgon 20m³", PORTEUR_7T5:"Porteur 7.5T", PORTEUR_12T:"Porteur 12T", PORTEUR_19T:"Porteur 19T", SEMI_TAUTLINER:"Semi tautliner", SEMI_FRIGO:"Semi frigo", SEMI_BACHE:"Semi bâché", SEMI_BENNE:"Semi benne", SEMI_CITERNE:"Semi citerne", SEMI_PLATEAU:"Semi plateau", SEMI_PORTE_CONTENEUR:"Porte-conteneur", MEGA_TRAILER:"Méga trailer" };
-const txLabels = { TOPUP:"Rechargement", RESERVE:"Réservation", RELEASE:"Libération", PAYMENT:"Paiement", COMMISSION:"Commission", REFUND:"Remboursement", WITHDRAWAL:"Retrait" };
-const txColors = { TOPUP:"#22c55e", RESERVE:"#f59e0b", RELEASE:"#60a5fa", PAYMENT:"#f87171", COMMISSION:"#a78bfa", REFUND:"#34d399", WITHDRAWAL:"#fb923c" };
+const STA={DRAFT:{bg:"#374151",fg:"#d1d5db",l:"Brouillon"},PUBLISHED:{bg:"#1e3a5f",fg:"#60a5fa",l:"Publiée"},BIDDING:{bg:"#4c1d95",fg:"#c4b5fd",l:"Enchères"},ASSIGNED:{bg:"#713f12",fg:"#fbbf24",l:"Attribuée"},ACCEPTED:{bg:"#164e63",fg:"#22d3ee",l:"Acceptée"},PICKUP:{bg:"#7c2d12",fg:"#fb923c",l:"Enlèvement"},IN_TRANSIT:{bg:"#14532d",fg:"#4ade80",l:"En route"},DELIVERED:{bg:"#064e3b",fg:"#34d399",l:"Livrée"},COMPLETED:{bg:"#052e16",fg:"#22c55e",l:"Terminée"},CANCELLED:{bg:"#450a0a",fg:"#f87171",l:"Annulée"},DISPUTED:{bg:"#78350f",fg:"#f59e0b",l:"Litige"},PENDING:{bg:"#1e3a5f",fg:"#93c5fd",l:"En attente"},EXPIRED:{bg:"#374151",fg:"#9ca3af",l:"Expirée"},REJECTED:{bg:"#450a0a",fg:"#fca5a5",l:"Refusée"},WITHDRAWN:{bg:"#374151",fg:"#6b7280",l:"Retirée"},ACTIVE:{bg:"#064e3b",fg:"#34d399",l:"Actif"},BOOKED:{bg:"#713f12",fg:"#fbbf24",l:"Réservé"},TRANSPORTEUR:{bg:"#164e63",fg:"#22d3ee",l:"Transporteur"},CHARGEUR:{bg:"#1e3a5f",fg:"#60a5fa",l:"Chargeur"}};
+const VT={FOURGON_3T5:"Fourgon 3.5T",FOURGON_12M3:"Fourgon 12m³",FOURGON_20M3:"Fourgon 20m³",PORTEUR_7T5:"Porteur 7.5T",PORTEUR_12T:"Porteur 12T",PORTEUR_19T:"Porteur 19T",SEMI_TAUTLINER:"Semi tautliner",SEMI_FRIGO:"Semi frigo",SEMI_BACHE:"Semi bâché",SEMI_BENNE:"Semi benne",SEMI_CITERNE:"Semi citerne",SEMI_PLATEAU:"Semi plateau",SEMI_PORTE_CONTENEUR:"Porte-conteneur",MEGA_TRAILER:"Méga trailer"};
+const TXL={TOPUP:"Rechargement",RESERVE:"Réservation",RELEASE:"Libération",PAYMENT:"Paiement",COMMISSION:"Commission",REFUND:"Remboursement",WITHDRAWAL:"Retrait"};
+const TXC={TOPUP:"#22c55e",RESERVE:"#f59e0b",RELEASE:"#60a5fa",PAYMENT:"#f87171",COMMISSION:"#a78bfa",REFUND:"#34d399",WITHDRAWAL:"#fb923c"};
 
-// ═══ UI COMPONENTS ═══
-const Badge = ({ status }) => (
-  <span style={{ display:"inline-block", padding:"3px 10px", borderRadius:6, fontSize:11, fontWeight:700, letterSpacing:"0.05em", background:statusColors[status]||"#374151", color:statusTextColors[status]||"#9ca3af", textTransform:"uppercase" }}>
-    {statusLabels[status]||status}
-  </span>
-);
-
-const Card = ({ children, style, onClick }) => (
-  <div onClick={onClick} style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:14, padding:20, cursor:onClick?"pointer":"default", transition:"all 0.2s", ...style }}
-    onMouseEnter={e => { if(onClick){e.currentTarget.style.background="rgba(255,255,255,0.07)";e.currentTarget.style.borderColor="rgba(255,255,255,0.15)"}}}
-    onMouseLeave={e => { if(onClick){e.currentTarget.style.background="rgba(255,255,255,0.04)";e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"}}}
-  >{children}</div>
-);
-
-const StatCard = ({ icon, label, value, accent }) => (
-  <div style={{ background:`linear-gradient(135deg, ${accent}15, ${accent}08)`, border:`1px solid ${accent}30`, borderRadius:14, padding:"18px 20px", minWidth:140 }}>
-    <div style={{ fontSize:24, marginBottom:4 }}>{icon}</div>
-    <div style={{ fontSize:26, fontWeight:800, color:accent }}>{value}</div>
-    <div style={{ fontSize:12, color:"#94a3b8", marginTop:2 }}>{label}</div>
-  </div>
-);
-
-const Btn = ({ children, onClick, variant="primary", disabled, style, size="md" }) => {
-  const styles = { primary:{background:"linear-gradient(135deg,#f97316,#ea580c)",color:"#fff",border:"none"}, secondary:{background:"rgba(255,255,255,0.06)",color:"#e2e8f0",border:"1px solid rgba(255,255,255,0.12)"}, danger:{background:"rgba(239,68,68,0.15)",color:"#f87171",border:"1px solid rgba(239,68,68,0.3)"}, ghost:{background:"transparent",color:"#94a3b8",border:"1px solid transparent"}, success:{background:"linear-gradient(135deg,#22c55e,#16a34a)",color:"#fff",border:"none"} };
-  const sizes = { sm:{padding:"6px 14px",fontSize:12}, md:{padding:"10px 20px",fontSize:13}, lg:{padding:"14px 28px",fontSize:15} };
-  return <button onClick={onClick} disabled={disabled} style={{ ...styles[variant],...sizes[size], borderRadius:10, fontWeight:600, cursor:disabled?"not-allowed":"pointer", opacity:disabled?0.5:1, transition:"all 0.2s", fontFamily:"inherit", ...style }}>{children}</button>;
+/* ═══ BAN AUTOCOMPLETE ═══ */
+const useBAN=()=>{
+  const[sug,setSug]=useState([]);const[show,setShow]=useState(false);const t=useRef(null);
+  const search=v=>{if(t.current)clearTimeout(t.current);if(v.length<3){setSug([]);setShow(false);return}
+    t.current=setTimeout(async()=>{try{const r=await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(v)}&limit=5`);const d=await r.json();if(d.features){setSug(d.features.map(f=>({label:f.properties.label,street:f.properties.name||"",city:f.properties.city||"",postcode:f.properties.postcode||"",lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0]}))); setShow(true)}}catch(e){}},300)};
+  return{sug,show,setShow,search,setSug};
 };
 
-const Input = ({ label, ...props }) => (
-  <div style={{ marginBottom:16 }}>
-    {label && <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#94a3b8", marginBottom:6, textTransform:"uppercase", letterSpacing:"0.05em" }}>{label}</label>}
-    <input {...props} style={{ width:"100%", padding:"12px 16px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:10, color:"#e2e8f0", fontSize:14, fontFamily:"inherit", outline:"none", boxSizing:"border-box", ...props.style }}
-      onFocus={e => e.target.style.borderColor="#f97316"} onBlur={e => e.target.style.borderColor="rgba(255,255,255,0.12)"} />
-  </div>
-);
+/* ═══ UI COMPONENTS ═══ */
+const Badge=({status,size})=>{const s=STA[status]||{bg:"#374151",fg:"#9ca3af",l:status};return <span style={{display:"inline-block",padding:size==="lg"?"4px 14px":"3px 10px",borderRadius:6,fontSize:size==="lg"?12:11,fontWeight:700,letterSpacing:".05em",background:s.bg,color:s.fg,textTransform:"uppercase"}}>{s.l}</span>};
 
-const Select = ({ label, options, ...props }) => (
-  <div style={{ marginBottom:16 }}>
-    {label && <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#94a3b8", marginBottom:6, textTransform:"uppercase", letterSpacing:"0.05em" }}>{label}</label>}
-    <select {...props} style={{ width:"100%", padding:"12px 16px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:10, color:"#e2e8f0", fontSize:14 }}>
-      {options.map(o => <option key={o.value} value={o.value} style={{ background:"#1a1a2e" }}>{o.label}</option>)}
-    </select>
-  </div>
-);
+const Card=({children,style,onClick,cn})=><div onClick={onClick} className={`fade-up ${cn||""}`} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:14,padding:20,cursor:onClick?"pointer":"default",transition:"all .2s",...style}} onMouseEnter={e=>{if(onClick){e.currentTarget.style.background="rgba(255,255,255,.07)";e.currentTarget.style.borderColor="rgba(255,255,255,.15)"}}} onMouseLeave={e=>{if(onClick){e.currentTarget.style.background="rgba(255,255,255,.04)";e.currentTarget.style.borderColor="rgba(255,255,255,.08)"}}}>{children}</div>;
 
-const Spinner = () => <div style={{ display:"flex", justifyContent:"center", padding:60 }}><div style={{ width:36, height:36, border:"3px solid rgba(255,255,255,0.1)", borderTopColor:"#f97316", borderRadius:"50%", animation:"spin 0.8s linear infinite" }}/></div>;
-const ErrorMsg = ({ msg }) => msg ? <div style={{ background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)", color:"#f87171", padding:"10px 14px", borderRadius:10, fontSize:13, marginBottom:16 }}>{msg}</div> : null;
-const SuccessMsg = ({ msg }) => msg ? <div style={{ background:"rgba(34,197,94,0.1)", border:"1px solid rgba(34,197,94,0.3)", color:"#22c55e", padding:"10px 14px", borderRadius:10, fontSize:13, marginBottom:16 }}>{msg}</div> : null;
+const StatCard=({icon,label,value,accent,sub})=><div className="fade-up" style={{background:`linear-gradient(135deg,${accent}15,${accent}08)`,border:`1px solid ${accent}30`,borderRadius:14,padding:"18px 20px",flex:"1 1 140px",minWidth:0}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div style={{fontSize:24}}>{icon}</div>{sub&&<div style={{fontSize:11,color:"#64748b"}}>{sub}</div>}</div><div style={{fontSize:24,fontWeight:800,color:accent,marginTop:4}}>{value}</div><div style={{fontSize:12,color:"#94a3b8",marginTop:2}}>{label}</div></div>;
 
-// ═══ LOGIN PAGE ═══
-const LoginPage = ({ onLogin, onShowRegister }) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+const Btn=({children,onClick,variant="primary",disabled,style,size="md"})=>{const vs={primary:{background:"linear-gradient(135deg,#f97316,#ea580c)",color:"#fff",border:"none"},secondary:{background:"rgba(255,255,255,.06)",color:"#e2e8f0",border:"1px solid rgba(255,255,255,.12)"},danger:{background:"rgba(239,68,68,.15)",color:"#f87171",border:"1px solid rgba(239,68,68,.3)"},ghost:{background:"transparent",color:"#94a3b8",border:"1px solid transparent"},success:{background:"linear-gradient(135deg,#22c55e,#16a34a)",color:"#fff",border:"none"},cyan:{background:"linear-gradient(135deg,#06b6d4,#0891b2)",color:"#fff",border:"none"}};const ss={sm:{padding:"6px 14px",fontSize:12},md:{padding:"10px 20px",fontSize:13},lg:{padding:"14px 28px",fontSize:15}};return<button onClick={onClick} disabled={disabled} style={{...vs[variant],...ss[size],borderRadius:10,fontWeight:600,cursor:disabled?"not-allowed":"pointer",opacity:disabled?.5:1,transition:"all .2s",fontFamily:"inherit",...style}}>{children}</button>};
 
-  const submit = async () => { setError(""); setLoading(true); try { await onLogin(email, password); } catch(e) { setError(e.message); } setLoading(false); };
+const Input=({label,required,...props})=><div style={{marginBottom:16}}>{label&&<label style={{display:"block",fontSize:12,fontWeight:600,color:"#94a3b8",marginBottom:6,textTransform:"uppercase",letterSpacing:".05em"}}>{label}{required&&<span style={{color:"#f97316"}}> *</span>}</label>}<input {...props} style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.12)",borderRadius:10,color:"#e2e8f0",fontSize:14,fontFamily:"inherit",outline:"none",...props.style}} onFocus={e=>e.target.style.borderColor="#f97316"} onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.12)"}/></div>;
 
-  return (
-    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"radial-gradient(ellipse at 30% 20%, #0c1929 0%, #070d17 50%, #040810 100%)" }}>
-      <div style={{ width:420, maxWidth:"90vw" }}>
-        <div style={{ textAlign:"center", marginBottom:48 }}>
-          <div style={{ fontSize:42, fontWeight:900, letterSpacing:"-0.03em" }}>
-            <span style={{ color:"#f97316" }}>FRET</span><span style={{ color:"#e2e8f0" }}>NOW</span>
-          </div>
-          <div style={{ fontSize:13, color:"#64748b", marginTop:6, letterSpacing:"0.15em", textTransform:"uppercase" }}>Plateforme digitale de fret</div>
-        </div>
-        <Card style={{ padding:32, background:"rgba(255,255,255,0.03)", backdropFilter:"blur(20px)" }}>
-          <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="votre@email.com" onKeyDown={e => e.key==="Enter" && submit()} />
-          <Input label="Mot de passe" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" onKeyDown={e => e.key==="Enter" && submit()} />
-          <ErrorMsg msg={error} />
-          <Btn onClick={submit} disabled={loading||!email||!password} size="lg" style={{ width:"100%" }}>{loading ? "Connexion..." : "Se connecter"}</Btn>
-        </Card>
-        <div style={{ textAlign:"center", marginTop:14 }}>
-          <a href="/reset-password.html" style={{ fontSize:13, color:"#94a3b8", textDecoration:"none" }}>Mot de passe oublié ?</a>
-        </div>
-        <div style={{ textAlign:"center", marginTop:10 }}>
-          <span style={{ fontSize:13, color:"#64748b" }}>Pas encore de compte ? </span>
-          <span onClick={onShowRegister} style={{ fontSize:13, color:"#f97316", cursor:"pointer", fontWeight:600 }}>Créer un compte</span>
-        </div>
-      </div>
-    </div>
-  );
+const TextArea=({label,required,...props})=><div style={{marginBottom:16}}>{label&&<label style={{display:"block",fontSize:12,fontWeight:600,color:"#94a3b8",marginBottom:6,textTransform:"uppercase",letterSpacing:".05em"}}>{label}{required&&<span style={{color:"#f97316"}}> *</span>}</label>}<textarea {...props} style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.12)",borderRadius:10,color:"#e2e8f0",fontSize:14,fontFamily:"inherit",outline:"none",minHeight:80,...props.style}} onFocus={e=>e.target.style.borderColor="#f97316"} onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.12)"}/></div>;
+
+const Select=({label,options,required,...props})=><div style={{marginBottom:16}}>{label&&<label style={{display:"block",fontSize:12,fontWeight:600,color:"#94a3b8",marginBottom:6,textTransform:"uppercase",letterSpacing:".05em"}}>{label}{required&&<span style={{color:"#f97316"}}> *</span>}</label>}<select {...props} style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.12)",borderRadius:10,color:"#e2e8f0",fontSize:14,...props.style}}>{options.map(o=><option key={o.value} value={o.value} style={{background:"#1a1a2e"}}>{o.label}</option>)}</select></div>;
+
+const AddrInput=({label,value,info,onSelect,required})=>{
+  const{sug,show,setShow,search,setSug}=useBAN();const[val,setVal]=useState(value||"");
+  useEffect(()=>setVal(value||""),[value]);
+  return<div style={{position:"relative",marginBottom:16}}>
+    <label style={{display:"block",fontSize:12,fontWeight:600,color:"#94a3b8",marginBottom:6,textTransform:"uppercase",letterSpacing:".05em"}}>{label}{required&&<span style={{color:"#f97316"}}> *</span>} <span style={{color:"#06b6d4",fontSize:10,fontWeight:400,textTransform:"none"}}>📍 Autocomplete</span></label>
+    <input type="text" value={val} onChange={e=>{setVal(e.target.value);search(e.target.value)}} onFocus={()=>{if(sug.length)setShow(true)}} onBlur={()=>setTimeout(()=>setShow(false),200)} placeholder="Tapez une adresse..." style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.12)",borderRadius:10,color:"#e2e8f0",fontSize:14,fontFamily:"inherit",outline:"none"}}/>
+    {show&&sug.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,background:"#1a1a2e",border:"1px solid rgba(255,255,255,.15)",borderRadius:10,marginTop:4,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,.5)"}}>
+      {sug.map((a,i)=><div key={i} onClick={()=>{onSelect(a);setVal(a.label);setSug([]);setShow(false)}} style={{padding:"10px 14px",cursor:"pointer",fontSize:13,borderBottom:"1px solid rgba(255,255,255,.06)"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(249,115,22,.1)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>📍 {a.label}</div>)}
+    </div>}
+    {info&&<div style={{fontSize:11,color:"#06b6d4",marginTop:4}}>✓ {info}</div>}
+  </div>;
 };
 
-// ═══ REGISTER PAGE ═══
-const RegisterPage = ({ onRegister, onShowLogin }) => {
-  const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ email:"", password:"", passwordConfirm:"", firstName:"", lastName:"", phone:"", role:"TRANSPORTEUR", companyName:"", siren:"", siret:"", address:"", postalCode:"", city:"" });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [siretStatus, setSiretStatus] = useState("idle"); // idle, loading, valid, invalid, error
-  const [siretCompany, setSiretCompany] = useState(null);
-  const [addressSuggestions, setAddressSuggestions] = useState([]);
-  const [showAddrDropdown, setShowAddrDropdown] = useState(false);
-  const siretTimer = useRef(null);
-  const addrTimer = useRef(null);
+const Spinner=()=><div style={{display:"flex",justifyContent:"center",padding:60}}><div style={{width:36,height:36,border:"3px solid rgba(255,255,255,.1)",borderTopColor:"#f97316",borderRadius:"50%",animation:"spin .8s linear infinite"}}/></div>;
+const Err=({msg})=>msg?<div className="fade-up" style={{background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.3)",color:"#f87171",padding:"10px 14px",borderRadius:10,fontSize:13,marginBottom:16}}>{msg}</div>:null;
+const Ok=({msg})=>msg?<div className="fade-up" style={{background:"rgba(34,197,94,.1)",border:"1px solid rgba(34,197,94,.3)",color:"#22c55e",padding:"10px 14px",borderRadius:10,fontSize:13,marginBottom:16}}>{msg}</div>:null;
+const Empty=({icon,title,desc,action,onAction})=><Card style={{textAlign:"center",padding:"48px 24px"}}><div style={{fontSize:48,marginBottom:12}}>{icon}</div><div style={{fontSize:18,fontWeight:700,marginBottom:8}}>{title}</div><div style={{color:"#64748b",fontSize:14,maxWidth:400,margin:"0 auto"}}>{desc}</div>{action&&<div style={{marginTop:20}}><Btn onClick={onAction}>{action}</Btn></div>}</Card>;
+const TabBar=({tabs,active,onChange})=><div style={{display:"flex",gap:4,background:"rgba(255,255,255,.04)",borderRadius:10,padding:4,marginBottom:20,flexWrap:"wrap"}}>{tabs.map(t=><button key={t.key} onClick={()=>onChange(t.key)} style={{flex:1,minWidth:100,padding:"8px 16px",borderRadius:8,border:"none",background:active===t.key?"rgba(249,115,22,.15)":"transparent",color:active===t.key?"#f97316":"#64748b",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{t.icon&&<span style={{marginRight:6}}>{t.icon}</span>}{t.label}</button>)}</div>;
 
-  const u = (k,v) => setForm(f => ({...f, [k]:v}));
-
-  // ── SIRET Auto-lookup via recherche-entreprises.api.gouv.fr ──
-  const lookupSiret = async (siret) => {
-    if (!siret || siret.length < 9) { setSiretStatus("idle"); setSiretCompany(null); return; }
-    setSiretStatus("loading");
-    try {
-      const res = await fetch(`https://recherche-entreprises.api.gouv.fr/search?q=${siret}&per_page=1`);
-      const data = await res.json();
-      if (data.results && data.results.length > 0) {
-        const r = data.results[0];
-        const siege = r.siege || {};
-        const nafCode = r.activite_principale || siege.activite_principale || "";
-        const nafMap = { "49.41A":"Transport routier de fret interurbain", "49.41B":"Transport routier de fret de proximité", "49.41C":"Location de camions avec chauffeur", "52.29A":"Messagerie, fret express", "52.29B":"Affrètement et organisation des transports" };
-        const company = {
-          name: r.nom_complet || r.nom_raison_sociale || "",
-          siren: r.siren || "",
-          siret: siege.siret || siret,
-          address: siege.adresse || "",
-          postalCode: siege.code_postal || "",
-          city: siege.libelle_commune || "",
-          activity: nafMap[nafCode] || (nafCode ? `NAF ${nafCode}` : ""),
-          isActive: r.etat_administratif === "A"
-        };
-        setSiretCompany(company);
-        if (!company.isActive) { setSiretStatus("inactive"); return; }
-        setSiretStatus("valid");
-        // Auto-fill fields
-        setForm(f => ({
-          ...f,
-          companyName: company.name || f.companyName,
-          siren: company.siren || f.siren,
-          siret: company.siret || f.siret,
-          address: company.address || f.address,
-          postalCode: company.postalCode || f.postalCode,
-          city: company.city || f.city,
-        }));
-      } else { setSiretStatus("invalid"); setSiretCompany(null); }
-    } catch (e) { setSiretStatus("error"); console.error(e); }
-  };
-
-  const handleSiretChange = (val) => {
-    const clean = val.replace(/\D/g, "").slice(0, 14);
-    u("siret", clean);
-    if (siretTimer.current) clearTimeout(siretTimer.current);
-    siretTimer.current = setTimeout(() => lookupSiret(clean), 500);
-  };
-
-  // ── Address Autocomplete via api-adresse.data.gouv.fr (BAN) ──
-  const handleAddressInput = (val) => {
-    u("address", val);
-    if (addrTimer.current) clearTimeout(addrTimer.current);
-    if (val.length < 3) { setAddressSuggestions([]); setShowAddrDropdown(false); return; }
-    addrTimer.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(val)}&limit=5`);
-        const data = await res.json();
-        if (data.features) {
-          setAddressSuggestions(data.features.map(f => ({
-            label: f.properties.label,
-            street: f.properties.name || "",
-            city: f.properties.city || "",
-            postcode: f.properties.postcode || "",
-          })));
-          setShowAddrDropdown(true);
-        }
-      } catch (e) { console.error(e); }
-    }, 300);
-  };
-
-  const selectAddress = (addr) => {
-    setForm(f => ({ ...f, address: addr.street, city: addr.city, postalCode: addr.postcode }));
-    setShowAddrDropdown(false);
-    setAddressSuggestions([]);
-  };
-
-  const submit = async () => {
-    setError(""); 
-    if (form.password !== form.passwordConfirm) return setError("Les mots de passe ne correspondent pas");
-    if (form.password.length < 8) return setError("Minimum 8 caractères pour le mot de passe");
-    setLoading(true);
-    try {
-      const data = {
-        email: form.email, password: form.password, firstName: form.firstName, lastName: form.lastName,
-        phone: form.phone || undefined, role: form.role,
-        company: form.companyName ? {
-          name: form.companyName, siren: form.siren, siret: form.siret,
-          address: form.address, postalCode: form.postalCode, city: form.city,
-        } : undefined,
-      };
-      await onRegister(data);
-    } catch(e) { setError(e.message); }
-    setLoading(false);
-  };
-
-  const siretIcon = { idle:"🏢", loading:"⏳", valid:"✅", invalid:"❌", inactive:"⚠️", error:"⚠️" }[siretStatus];
-
-  return (
-    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"radial-gradient(ellipse at 30% 20%, #0c1929 0%, #070d17 50%, #040810 100%)", padding:"40px 0" }}>
-      <div style={{ width:520, maxWidth:"90vw" }}>
-        <div style={{ textAlign:"center", marginBottom:32 }}>
-          <div style={{ fontSize:36, fontWeight:900 }}><span style={{ color:"#f97316" }}>FRET</span><span style={{ color:"#e2e8f0" }}>NOW</span></div>
-          <div style={{ fontSize:13, color:"#64748b", marginTop:4 }}>Inscription — Étape {step}/2</div>
-        </div>
-
-        <Card style={{ padding:32, background:"rgba(255,255,255,0.03)" }}>
-          {step === 1 && (<div>
-            <h3 style={{ color:"#f97316", fontSize:16, fontWeight:700, marginBottom:20 }}>Vos informations</h3>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-              <Input label="Prénom" value={form.firstName} onChange={e => u("firstName",e.target.value)} placeholder="Votre prénom" />
-              <Input label="Nom" value={form.lastName} onChange={e => u("lastName",e.target.value)} placeholder="Votre nom" />
-            </div>
-            <Input label="Email professionnel" type="email" value={form.email} onChange={e => u("email",e.target.value)} placeholder="votre@entreprise.com" />
-            <Input label="Téléphone" type="tel" value={form.phone} onChange={e => u("phone",e.target.value)} placeholder="+33612345678" />
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-              <Input label="Mot de passe" type="password" value={form.password} onChange={e => u("password",e.target.value)} placeholder="Min. 8 caractères" />
-              <Input label="Confirmer" type="password" value={form.passwordConfirm} onChange={e => u("passwordConfirm",e.target.value)} placeholder="Confirmer" />
-            </div>
-            <Select label="Vous êtes" value={form.role} onChange={e => u("role",e.target.value)}
-              options={[{ value:"TRANSPORTEUR", label:"🚛 Transporteur — Je propose mes camions" }, { value:"CHARGEUR", label:"📦 Chargeur / Expéditeur — J'envoie des marchandises" }]} />
-            <ErrorMsg msg={error} />
-            <Btn onClick={() => { if(!form.firstName||!form.lastName||!form.email||!form.password) return setError("Remplissez tous les champs"); if(form.password!==form.passwordConfirm) return setError("Mots de passe différents"); setError(""); setStep(2); }} size="lg" style={{ width:"100%" }}>Continuer</Btn>
-          </div>)}
-
-          {step === 2 && (<div>
-            <h3 style={{ color:"#f97316", fontSize:16, fontWeight:700, marginBottom:20 }}>Votre entreprise</h3>
-
-            {/* SIRET with auto-lookup */}
-            <div style={{ marginBottom:16 }}>
-              <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#94a3b8", marginBottom:6, textTransform:"uppercase", letterSpacing:"0.05em" }}>SIRET (14 chiffres) {siretIcon}</label>
-              <input type="text" value={form.siret} onChange={e => handleSiretChange(e.target.value)} placeholder="Entrez votre SIRET — remplissage auto"
-                style={{ width:"100%", padding:"12px 16px", background:"rgba(255,255,255,0.05)", border:`1px solid ${siretStatus==="valid"?"#22c55e":siretStatus==="invalid"?"#ef4444":"rgba(255,255,255,0.12)"}`, borderRadius:10, color:"#e2e8f0", fontSize:14, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }} />
-              {siretStatus === "valid" && siretCompany && (
-                <div style={{ marginTop:6, padding:"8px 12px", background:"rgba(34,197,94,0.08)", borderRadius:8, border:"1px solid rgba(34,197,94,0.2)" }}>
-                  <div style={{ fontSize:14, fontWeight:700, color:"#22c55e" }}>✅ {siretCompany.name}</div>
-                  <div style={{ fontSize:12, color:"#94a3b8", marginTop:2 }}>{siretCompany.address} — {siretCompany.postalCode} {siretCompany.city}</div>
-                  {siretCompany.activity && <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>📋 {siretCompany.activity}</div>}
-                </div>
-              )}
-              {siretStatus === "inactive" && siretCompany && (
-                <div style={{ marginTop:6, padding:"8px 12px", background:"rgba(245,158,11,0.08)", borderRadius:8, border:"1px solid rgba(245,158,11,0.2)" }}>
-                  <div style={{ fontSize:13, fontWeight:600, color:"#f59e0b" }}>⚠️ Entreprise inactive : {siretCompany.name}</div>
-                </div>
-              )}
-              {siretStatus === "invalid" && <div style={{ marginTop:4, fontSize:12, color:"#ef4444" }}>❌ Ce SIRET n'existe pas dans la base SIRENE</div>}
-              {siretStatus === "loading" && <div style={{ marginTop:4, fontSize:12, color:"#60a5fa" }}>⏳ Vérification en cours...</div>}
-            </div>
-
-            <Input label="Nom de l'entreprise" value={form.companyName} onChange={e => u("companyName",e.target.value)} placeholder="Auto-rempli via SIRET ou saisie manuelle" />
-            <Input label="SIREN" value={form.siren} onChange={e => u("siren",e.target.value.replace(/\D/g,"").slice(0,9))} placeholder="Auto-rempli via SIRET" />
-
-            {/* Address with BAN autocomplete */}
-            <div style={{ marginBottom:16, position:"relative" }}>
-              <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#94a3b8", marginBottom:6, textTransform:"uppercase", letterSpacing:"0.05em" }}>Adresse 📍</label>
-              <input type="text" value={form.address} onChange={e => handleAddressInput(e.target.value)} onBlur={() => setTimeout(() => setShowAddrDropdown(false), 200)} placeholder="Tapez pour rechercher une adresse..."
-                style={{ width:"100%", padding:"12px 16px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:10, color:"#e2e8f0", fontSize:14, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }}
-                onFocus={e => { e.target.style.borderColor="#f97316"; if(addressSuggestions.length>0) setShowAddrDropdown(true); }} />
-              {showAddrDropdown && addressSuggestions.length > 0 && (
-                <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:50, background:"#1a1a2e", border:"1px solid rgba(255,255,255,0.15)", borderRadius:10, marginTop:4, overflow:"hidden", boxShadow:"0 8px 32px rgba(0,0,0,0.5)" }}>
-                  {addressSuggestions.map((a, i) => (
-                    <div key={i} onClick={() => selectAddress(a)}
-                      style={{ padding:"10px 14px", cursor:"pointer", fontSize:13, color:"#e2e8f0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}
-                      onMouseEnter={e => e.currentTarget.style.background="rgba(249,115,22,0.1)"}
-                      onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                      📍 {a.label}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:12 }}>
-              <Input label="Ville" value={form.city} onChange={e => u("city",e.target.value)} placeholder="Auto-rempli ou saisie" />
-              <Input label="Code postal" value={form.postalCode} onChange={e => u("postalCode",e.target.value.replace(/\D/g,"").slice(0,5))} placeholder="75001" />
-            </div>
-            <ErrorMsg msg={error} />
-            <div style={{ display:"flex", gap:12 }}>
-              <Btn variant="secondary" onClick={() => setStep(1)} size="lg" style={{ flex:1 }}>Retour</Btn>
-              <Btn onClick={submit} disabled={loading||!form.companyName||!form.siren||!form.siret||!form.address||!form.city||!form.postalCode} size="lg" style={{ flex:2 }}>
-                {loading ? "Création..." : "Créer mon compte"}
-              </Btn>
-            </div>
-          </div>)}
-        </Card>
-
-        <div style={{ textAlign:"center", marginTop:20 }}>
-          <span style={{ fontSize:13, color:"#64748b" }}>Déjà inscrit ? </span>
-          <span onClick={onShowLogin} style={{ fontSize:13, color:"#f97316", cursor:"pointer", fontWeight:600 }}>Se connecter</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ═══ SIDEBAR ═══
-const Sidebar = ({ user, page, setPage, logout }) => {
-  const isAdmin = ["ADMIN","SUPER_ADMIN"].includes(user.role);
-  const isChargeur = user.role === "CHARGEUR";
-  const isTransporteur = user.role === "TRANSPORTEUR";
-
-  const items = [
-    { key:"dashboard", icon:"📊", label:"Tableau de bord" },
-    ...(isTransporteur ? [{ key:"freight-exchange", icon:"📦", label:"Bourse de fret" }] : []),
-    { key:"missions", icon:"🚛", label:"Missions" },
-    ...(isChargeur ? [{ key:"new-mission", icon:"➕", label:"Nouvelle mission" }] : []),
-    ...(isTransporteur ? [{ key:"my-bids", icon:"💰", label:"Mes offres" }] : []),
-    ...(isChargeur ? [{ key:"wallet", icon:"💳", label:"Portefeuille" }] : []),
-    ...(isTransporteur ? [{ key:"vehicles", icon:"🚚", label:"Véhicules" }, { key:"drivers", icon:"👷", label:"Conducteurs" }] : []),
-    { key:"notifications", icon:"🔔", label:"Notifications" },
-    ...(isAdmin ? [{ key:"wallet", icon:"💳", label:"Finances" }, { key:"admin-users", icon:"👥", label:"Utilisateurs" }, { key:"admin-companies", icon:"🏢", label:"Entreprises" }, { key:"admin-agents", icon:"🤖", label:"Agents IA" }] : []),
-  ];
-
-  return (
-    <div style={{ width:240, minHeight:"100vh", background:"rgba(0,0,0,0.3)", borderRight:"1px solid rgba(255,255,255,0.06)", padding:"20px 0", display:"flex", flexDirection:"column", flexShrink:0 }}>
-      <div style={{ padding:"0 20px", marginBottom:32 }}>
-        <div style={{ fontSize:26, fontWeight:900 }}><span style={{ color:"#f97316" }}>FRET</span><span style={{ color:"#e2e8f0" }}>NOW</span></div>
-        <div style={{ fontSize:10, color:"#475569", marginTop:2 }}>v6.1 — Production</div>
-      </div>
-      <nav style={{ flex:1, padding:"0 10px" }}>
-        {items.map(i => (
-          <div key={i.key} onClick={() => setPage(i.key)} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:10, cursor:"pointer", marginBottom:2, fontSize:13, fontWeight:page===i.key?600:400, color:page===i.key?"#f97316":"#94a3b8", background:page===i.key?"rgba(249,115,22,0.1)":"transparent" }}>
-            <span style={{ fontSize:16 }}>{i.icon}</span>{i.label}
-          </div>
-        ))}
-      </nav>
-      <div style={{ padding:"16px 20px", borderTop:"1px solid rgba(255,255,255,0.06)" }}>
-        <div style={{ fontSize:13, fontWeight:600, color:"#e2e8f0" }}>{user.firstName} {user.lastName}</div>
-        <div style={{ fontSize:11, color:"#64748b", marginBottom:10 }}>{user.role}</div>
-        <Btn variant="ghost" size="sm" onClick={logout} style={{ width:"100%" }}>Déconnexion</Btn>
-      </div>
-    </div>
-  );
-};
-
-// ═══ WALLET PAGE ═══
-const WalletPage = ({ api, user }) => {
-  const [wallet, setWallet] = useState(null);
-  const [txs, setTxs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [topupAmount, setTopupAmount] = useState("");
-  const [topupLoading, setTopupLoading] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
-
-  const loadWallet = async () => {
-    try {
-      const [b, t] = await Promise.all([api("/wallet/balance"), api("/wallet/transactions")]);
-      setWallet(b); setTxs(t.transactions || []);
-    } catch (e) { console.error(e); }
-    setLoading(false);
-  };
-
-  useEffect(() => { loadWallet(); }, [api]);
-
-  const doTopup = async () => {
-    const cents = Math.round(parseFloat(topupAmount) * 100);
-    if (!cents || cents < 1000) return setErr("Minimum 10€");
-    setTopupLoading(true); setErr(""); setMsg("");
-    try {
-      const r = await api("/wallet/topup", { method:"POST", body:JSON.stringify({ amountCents:cents }) });
-      setMsg(r.message || "Wallet rechargé !"); setTopupAmount("");
-      loadWallet();
-    } catch(e) { setErr(e.message); }
-    setTopupLoading(false);
-  };
-
-  if (loading) return <Spinner />;
-
-  return (
-    <div>
-      <h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>💳 Portefeuille</h1>
-
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:14, marginBottom:32 }}>
-        <StatCard icon="💰" label="Solde disponible" value={fmt(wallet?.availableCents || 0)} accent="#22c55e" />
-        <StatCard icon="🔒" label="Réservé (escrow)" value={fmt(wallet?.reservedCents || 0)} accent="#f59e0b" />
-        <StatCard icon="📊" label="Solde total" value={fmt(wallet?.balanceCents || 0)} accent="#60a5fa" />
-      </div>
-
-      <Card style={{ marginBottom:24 }}>
-        <h3 style={{ fontSize:16, fontWeight:700, color:"#e2e8f0", marginBottom:16 }}>Recharger le portefeuille</h3>
-        <div style={{ display:"flex", gap:12, alignItems:"flex-end" }}>
-          <div style={{ flex:1 }}>
-            <Input label="Montant (€)" type="number" min="10" step="10" value={topupAmount} onChange={e => setTopupAmount(e.target.value)} placeholder="Ex: 500" />
-          </div>
-          <Btn onClick={doTopup} disabled={topupLoading} style={{ marginBottom:16, height:46 }} variant="success">
-            {topupLoading ? "..." : "Recharger"}
-          </Btn>
-        </div>
-        <div style={{ display:"flex", gap:8, marginBottom:8 }}>
-          {[100,500,1000,5000].map(v => (
-            <span key={v} onClick={() => setTopupAmount(String(v))} style={{ padding:"4px 12px", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:6, cursor:"pointer", fontSize:12, color:"#94a3b8" }}>{v}€</span>
-          ))}
-        </div>
-        <ErrorMsg msg={err} />
-        <SuccessMsg msg={msg} />
+/* ═══ LOGIN ═══ */
+const LoginPage=({onLogin,onReg})=>{
+  const[email,setEmail]=useState("");const[pw,setPw]=useState("");const[err,setErr]=useState("");const[ld,setLd]=useState(false);
+  const go=async()=>{setErr("");setLd(true);try{await onLogin(email,pw)}catch(e){setErr(e.message)}setLd(false)};
+  return<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"radial-gradient(ellipse at 30% 20%,#0c1929 0%,#070d17 50%,#040810 100%)"}}>
+    <div style={{width:420,maxWidth:"90vw"}}>
+      <div style={{textAlign:"center",marginBottom:48}}><div style={{fontSize:42,fontWeight:900,letterSpacing:"-.03em"}}><span style={{color:"#f97316"}}>FRET</span><span>NOW</span></div><div style={{fontSize:13,color:"#64748b",marginTop:6,letterSpacing:".15em",textTransform:"uppercase"}}>Plateforme digitale de fret</div></div>
+      <Card style={{padding:32,background:"rgba(255,255,255,.03)"}}>
+        <Input label="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="votre@email.com" onKeyDown={e=>e.key==="Enter"&&go()}/>
+        <Input label="Mot de passe" type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&go()}/>
+        <Err msg={err}/><Btn onClick={go} disabled={ld||!email||!pw} size="lg" style={{width:"100%"}}>{ld?"Connexion...":"Se connecter"}</Btn>
       </Card>
-
-      <h2 style={{ fontSize:18, fontWeight:700, marginBottom:16 }}>Historique des mouvements</h2>
-      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-        {txs.length === 0 ? (
-          <Card><div style={{ textAlign:"center", color:"#64748b", padding:20 }}>Aucune transaction</div></Card>
-        ) : txs.map(tx => (
-          <Card key={tx.id}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div>
-                <span style={{ fontSize:12, fontWeight:700, color:txColors[tx.type]||"#94a3b8", textTransform:"uppercase" }}>{txLabels[tx.type]||tx.type}</span>
-                <div style={{ fontSize:13, color:"#94a3b8", marginTop:2 }}>{tx.description}</div>
-                <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>{fmtDateTime(tx.createdAt)}</div>
-              </div>
-              <div style={{ fontSize:18, fontWeight:800, color:tx.amountCents>0?"#22c55e":"#f87171" }}>
-                {tx.amountCents>0?"+":""}{fmt(tx.amountCents)}
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+      <div style={{textAlign:"center",marginTop:14}}><a href="/reset-password.html" style={{fontSize:13,color:"#94a3b8",textDecoration:"none"}}>Mot de passe oublié ?</a></div>
+      <div style={{textAlign:"center",marginTop:10}}><span style={{fontSize:13,color:"#64748b"}}>Pas encore inscrit ? </span><span onClick={onReg} style={{fontSize:13,color:"#f97316",cursor:"pointer",fontWeight:600}}>Créer un compte</span></div>
     </div>
-  );
+  </div>;
 };
 
-// ═══ DASHBOARD ═══
-const Dashboard = ({ api, user }) => {
-  const [stats, setStats] = useState(null);
-  const [missions, setMissions] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const mData = await api("/missions?limit=5");
-        setMissions(mData.missions || []);
-        if (["ADMIN","SUPER_ADMIN"].includes(user.role)) { try { const d = await api("/admin/dashboard"); setStats(d.stats); } catch(e){} }
-      } catch(e) { console.error(e); }
-      setLoading(false);
-    };
-    load();
-  }, [api, user.role]);
-
-  if (loading) return <Spinner />;
-
-  return (
-    <div>
-      <h1 style={{ fontSize:28, fontWeight:800, marginBottom:8 }}>Bienvenue, {user.firstName}</h1>
-      <p style={{ color:"#64748b", marginBottom:32, fontSize:14 }}>
-        {user.role==="CHARGEUR" && "Gérez vos expéditions et suivez vos missions."}
-        {user.role==="TRANSPORTEUR" && "Trouvez des missions et optimisez vos retours à charge."}
-        {["ADMIN","SUPER_ADMIN"].includes(user.role) && "Vue d'ensemble de la plateforme FRETNOW."}
-      </p>
-      {user.status === "PENDING_VERIFICATION" && (
-        <Card style={{ marginBottom:24, borderLeft:"3px solid #f59e0b" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <span style={{ fontSize:24 }}>⏳</span>
-            <div>
-              <div style={{ fontWeight:700, color:"#fbbf24" }}>Compte en attente de vérification</div>
-              <div style={{ fontSize:13, color:"#94a3b8" }}>Notre équipe vérifie vos documents. Vous serez notifié dès validation.</div>
-            </div>
+/* ═══ REGISTER ═══ */
+const RegisterPage=({onRegister,onLogin})=>{
+  const[step,setStep]=useState(1);const[err,setErr]=useState("");const[ld,setLd]=useState(false);
+  const[f,sF]=useState({email:"",password:"",passwordConfirm:"",firstName:"",lastName:"",phone:"",role:"TRANSPORTEUR",companyName:"",siren:"",siret:"",address:"",postalCode:"",city:""});
+  const[siSt,setSiSt]=useState("idle");const[siCo,setSiCo]=useState(null);const sRef=useRef(null);
+  const u=(k,v)=>sF(x=>({...x,[k]:v}));
+  const lookupSiret=async v=>{if(!v||v.length<9){setSiSt("idle");setSiCo(null);return}setSiSt("loading");try{const r=await fetch(`https://recherche-entreprises.api.gouv.fr/search?q=${v}&per_page=1`);const d=await r.json();if(d.results?.length>0){const x=d.results[0],s=x.siege||{};const c={name:x.nom_complet||"",siren:x.siren||"",siret:s.siret||v,address:s.adresse||"",postalCode:s.code_postal||"",city:s.libelle_commune||"",activity:x.libelle_activite_principale||"",isActive:x.etat_administratif==="A"};setSiCo(c);if(!c.isActive){setSiSt("inactive");return}setSiSt("valid");sF(f=>({...f,companyName:c.name||f.companyName,siren:c.siren||f.siren,siret:c.siret||f.siret,address:c.address||f.address,postalCode:c.postalCode||f.postalCode,city:c.city||f.city}))}else{setSiSt("invalid");setSiCo(null)}}catch(e){setSiSt("error")}};
+  const handleSiret=v=>{const c=v.replace(/\D/g,"").slice(0,14);u("siret",c);if(sRef.current)clearTimeout(sRef.current);sRef.current=setTimeout(()=>lookupSiret(c),500)};
+  const go=async()=>{setErr("");if(f.password!==f.passwordConfirm)return setErr("Mots de passe différents");if(f.password.length<8)return setErr("Minimum 8 caractères");setLd(true);try{await onRegister({email:f.email,password:f.password,firstName:f.firstName,lastName:f.lastName,phone:f.phone||undefined,role:f.role,company:f.companyName?{name:f.companyName,siren:f.siren,siret:f.siret,address:f.address,postalCode:f.postalCode,city:f.city}:undefined})}catch(e){setErr(e.message)}setLd(false)};
+  const siI={idle:"🏢",loading:"⏳",valid:"✅",invalid:"❌",inactive:"⚠️",error:"⚠️"}[siSt];
+  return<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"radial-gradient(ellipse at 30% 20%,#0c1929 0%,#070d17 50%,#040810 100%)",padding:"40px 0"}}>
+    <div style={{width:520,maxWidth:"90vw"}}>
+      <div style={{textAlign:"center",marginBottom:32}}><div style={{fontSize:36,fontWeight:900}}><span style={{color:"#f97316"}}>FRET</span>NOW</div><div style={{fontSize:13,color:"#64748b",marginTop:4}}>Inscription — Étape {step}/2</div></div>
+      <Card style={{padding:32,background:"rgba(255,255,255,.03)"}}>
+        {step===1&&<div>
+          <h3 style={{color:"#f97316",fontSize:16,fontWeight:700,marginBottom:20}}>Vos informations</h3>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><Input label="Prénom" required value={f.firstName} onChange={e=>u("firstName",e.target.value)}/><Input label="Nom" required value={f.lastName} onChange={e=>u("lastName",e.target.value)}/></div>
+          <Input label="Email professionnel" required type="email" value={f.email} onChange={e=>u("email",e.target.value)} placeholder="votre@entreprise.com"/>
+          <Input label="Téléphone" type="tel" value={f.phone} onChange={e=>u("phone",e.target.value)} placeholder="+33612345678"/>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><Input label="Mot de passe" required type="password" value={f.password} onChange={e=>u("password",e.target.value)} placeholder="Min. 8 car."/><Input label="Confirmer" required type="password" value={f.passwordConfirm} onChange={e=>u("passwordConfirm",e.target.value)}/></div>
+          <Select label="Vous êtes" value={f.role} onChange={e=>u("role",e.target.value)} options={[{value:"TRANSPORTEUR",label:"🚛 Transporteur — Je propose mes camions"},{value:"CHARGEUR",label:"📦 Chargeur — J'expédie des marchandises"}]}/>
+          <Err msg={err}/><Btn onClick={()=>{if(!f.firstName||!f.lastName||!f.email||!f.password)return setErr("Remplissez les champs obligatoires");if(f.password!==f.passwordConfirm)return setErr("Mots de passe différents");setErr("");setStep(2)}} size="lg" style={{width:"100%"}}>Continuer →</Btn>
+        </div>}
+        {step===2&&<div>
+          <h3 style={{color:"#f97316",fontSize:16,fontWeight:700,marginBottom:20}}>Votre entreprise</h3>
+          <div style={{marginBottom:16}}>
+            <label style={{display:"block",fontSize:12,fontWeight:600,color:"#94a3b8",marginBottom:6,textTransform:"uppercase",letterSpacing:".05em"}}>SIRET {siI}<span style={{color:"#f97316"}}> *</span></label>
+            <input type="text" value={f.siret} onChange={e=>handleSiret(e.target.value)} placeholder="Entrez votre SIRET — remplissage auto" style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,.05)",border:`1px solid ${siSt==="valid"?"#22c55e":siSt==="invalid"?"#ef4444":"rgba(255,255,255,.12)"}`,borderRadius:10,color:"#e2e8f0",fontSize:14,fontFamily:"inherit",outline:"none"}}/>
+            {siSt==="valid"&&siCo&&<div style={{marginTop:6,padding:"8px 12px",background:"rgba(34,197,94,.08)",borderRadius:8,border:"1px solid rgba(34,197,94,.2)"}}><div style={{fontSize:14,fontWeight:700,color:"#22c55e"}}>✅ {siCo.name}</div><div style={{fontSize:12,color:"#94a3b8",marginTop:2}}>{siCo.address} — {siCo.postalCode} {siCo.city}</div></div>}
+            {siSt==="invalid"&&<div style={{marginTop:4,fontSize:12,color:"#ef4444"}}>❌ SIRET introuvable</div>}
           </div>
-        </Card>
-      )}
-      {stats && (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))", gap:14, marginBottom:32 }}>
-          <StatCard icon="👥" label="Utilisateurs" value={stats.totalUsers} accent="#60a5fa" />
-          <StatCard icon="🏢" label="Entreprises" value={stats.totalCompanies} accent="#a78bfa" />
-          <StatCard icon="🚛" label="Missions" value={stats.totalMissions} accent="#f97316" />
-          <StatCard icon="📋" label="Actives" value={stats.activeMissions} accent="#fbbf24" />
-          <StatCard icon="⏳" label="En attente" value={stats.pendingVerifications} accent="#22d3ee" />
-          <StatCard icon="💰" label="CA mois" value={`${stats.monthlyRevenueEur||0}€`} accent="#22c55e" />
-        </div>
-      )}
-      <h2 style={{ fontSize:18, fontWeight:700, marginBottom:16 }}>{missions.length > 0 ? "Dernières missions" : "Aucune mission"}</h2>
-      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-        {missions.map(m => (
-          <Card key={m.id}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-              <div>
-                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}><Badge status={m.status} /><span style={{ fontSize:12, color:"#64748b" }}>{m.reference}</span></div>
-                <div style={{ fontSize:16, fontWeight:700 }}>{m.pickupCity} → {m.deliveryCity}</div>
-                <div style={{ fontSize:13, color:"#94a3b8" }}>{m.goodsDescription||"—"} {m.weightKg?`• ${(m.weightKg/1000).toFixed(1)}t`:""}</div>
-              </div>
-              <div style={{ textAlign:"right" }}>{m.budgetMaxCents && <div style={{ fontSize:18, fontWeight:700, color:"#fbbf24" }}>{fmt(m.finalPriceCents||m.budgetMaxCents)}</div>}</div>
-            </div>
-          </Card>
-        ))}
-        {missions.length === 0 && <Card><div style={{ textAlign:"center", color:"#64748b", padding:20 }}>Aucune mission pour le moment. {user.role==="CHARGEUR"?"Créez votre première mission !":"Les missions apparaîtront ici."}</div></Card>}
-      </div>
-    </div>
-  );
-};
-
-// ═══ MISSIONS LIST ═══
-const MissionsPage = ({ api, user, setPage, setSelectedMission }) => {
-  const [missions, setMissions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("");
-
-  useEffect(() => {
-    api(`/missions?limit=50${filter?`&status=${filter}`:""}`)
-      .then(d => setMissions(d.missions||[]))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [api, filter]);
-
-  if (loading) return <Spinner />;
-
-  return (
-    <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
-        <h1 style={{ fontSize:24, fontWeight:800 }}>Missions</h1>
-        {user.role==="CHARGEUR" && <Btn onClick={() => setPage("new-mission")}>+ Nouvelle mission</Btn>}
-      </div>
-      <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
-        {["","PUBLISHED","BIDDING","IN_TRANSIT","COMPLETED","ASSIGNED"].map(s => (
-          <Btn key={s} variant={filter===s?"primary":"secondary"} size="sm" onClick={() => { setFilter(s); setLoading(true); }}>
-            {s ? statusLabels[s]||s : "Toutes"}
-          </Btn>
-        ))}
-      </div>
-      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-        {missions.map(m => (
-          <Card key={m.id} onClick={() => { setSelectedMission(m.id); setPage("mission-detail"); }}>
-            <div style={{ display:"flex", justifyContent:"space-between" }}>
-              <div style={{ flex:1 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}><Badge status={m.status} /><span style={{ fontSize:12, color:"#64748b", fontFamily:"monospace" }}>{m.reference}</span></div>
-                <div style={{ fontSize:16, fontWeight:700 }}>{m.pickupCity} → {m.deliveryCity}</div>
-                <div style={{ fontSize:13, color:"#94a3b8", marginTop:4 }}>{m.goodsDescription} {m.weightKg?`• ${(m.weightKg/1000).toFixed(1)}t`:""} {m.palletCount?`• ${m.palletCount} pal.`:""}</div>
-                <div style={{ display:"flex", gap:16, marginTop:6, fontSize:12, color:"#64748b" }}>
-                  <span>{fmtDate(m.pickupDateRequested)}</span>{m.distanceKm && <span>{m.distanceKm} km</span>}{m._count?.bids>0 && <span>{m._count.bids} offres</span>}
-                </div>
-              </div>
-              <div style={{ textAlign:"right", marginLeft:16 }}><div style={{ fontSize:20, fontWeight:800, color:m.finalPriceCents?"#22c55e":"#fbbf24" }}>{fmt(m.finalPriceCents||m.budgetMaxCents)}</div></div>
-            </div>
-          </Card>
-        ))}
-        {missions.length===0 && <div style={{ textAlign:"center", color:"#64748b", padding:40 }}>Aucune mission</div>}
-      </div>
-    </div>
-  );
-};
-
-// ═══ MISSION DETAIL (compact) ═══
-const MissionDetail = ({ api, user, missionId, setPage }) => {
-  const [m, setM] = useState(null);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => { if(missionId) api(`/missions/${missionId}`).then(setM).catch(console.error).finally(() => setLoading(false)); }, [api, missionId]);
-  if (loading) return <Spinner />;
-  if (!m) return <div style={{ color:"#f87171", padding:40 }}>Mission introuvable</div>;
-
-  return (
-    <div>
-      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24 }}>
-        <Btn variant="ghost" size="sm" onClick={() => setPage("missions")}>← Retour</Btn>
-        <Badge status={m.status} /><span style={{ fontSize:14, color:"#64748b", fontFamily:"monospace" }}>{m.reference}</span>
-      </div>
-      <h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>{m.pickupCity} → {m.deliveryCity}</h1>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:24 }}>
-        <Card style={{ borderLeft:"3px solid #f97316" }}>
-          <div style={{ fontSize:12, color:"#f97316", fontWeight:700, marginBottom:10, textTransform:"uppercase" }}>Enlèvement</div>
-          <div style={{ fontSize:15, fontWeight:600 }}>{m.pickupAddress}</div>
-          <div style={{ fontSize:13, color:"#94a3b8" }}>{m.pickupPostalCode} {m.pickupCity}</div>
-          <div style={{ fontSize:12, color:"#64748b", marginTop:8 }}>{fmtDateTime(m.pickupDateRequested)}</div>
-        </Card>
-        <Card style={{ borderLeft:"3px solid #22c55e" }}>
-          <div style={{ fontSize:12, color:"#22c55e", fontWeight:700, marginBottom:10, textTransform:"uppercase" }}>Livraison</div>
-          <div style={{ fontSize:15, fontWeight:600 }}>{m.deliveryAddress}</div>
-          <div style={{ fontSize:13, color:"#94a3b8" }}>{m.deliveryPostalCode} {m.deliveryCity}</div>
-          <div style={{ fontSize:12, color:"#64748b", marginTop:8 }}>{fmtDateTime(m.deliveryDateRequested)}</div>
-        </Card>
-      </div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16, marginBottom:24 }}>
-        <Card><div style={{ fontSize:12, color:"#64748b", marginBottom:8 }}>Marchandise</div><div style={{ fontSize:14, fontWeight:600 }}>{m.goodsDescription||"—"}</div><div style={{ fontSize:13, color:"#94a3b8", marginTop:4 }}>{m.weightKg?`${(m.weightKg/1000).toFixed(1)}t `:""}{m.palletCount?`${m.palletCount} pal.`:""}</div></Card>
-        <Card><div style={{ fontSize:12, color:"#64748b", marginBottom:8 }}>Trajet</div><div style={{ fontSize:22, fontWeight:800 }}>{m.distanceKm?`${m.distanceKm} km`:"—"}</div></Card>
-        <Card><div style={{ fontSize:12, color:"#64748b", marginBottom:8 }}>Prix</div><div style={{ fontSize:22, fontWeight:800, color:m.finalPriceCents?"#22c55e":"#fbbf24" }}>{fmt(m.finalPriceCents||m.budgetMaxCents)}</div><div style={{ fontSize:12, color:"#64748b", marginTop:4 }}>Commission: {m.commissionPercent}%</div></Card>
-      </div>
-      {m.bids && m.bids.length>0 && (<div style={{ marginBottom:24 }}><h2 style={{ fontSize:18, fontWeight:700, marginBottom:12 }}>Offres ({m.bids.length})</h2>{m.bids.map(b => (
-        <Card key={b.id} style={{ marginBottom:8 }}><div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}><div><Badge status={b.status} /> <span style={{ fontSize:14, fontWeight:600, marginLeft:8 }}>{b.transporteur?.firstName} {b.transporteur?.lastName}</span>{b.message && <div style={{ fontSize:12, color:"#94a3b8", marginTop:4 }}>"{b.message}"</div>}</div><div style={{ fontSize:22, fontWeight:800, color:b.status==="ACCEPTED"?"#22c55e":"#e2e8f0" }}>{fmt(b.priceCents)}</div></div></Card>
-      ))}</div>)}
-    </div>
-  );
-};
-
-// ═══ NEW MISSION ═══
-const NewMissionPage = ({ api, setPage }) => {
-  const [form, setForm] = useState({ pickupAddress:"", pickupCity:"", pickupPostalCode:"", deliveryAddress:"", deliveryCity:"", deliveryPostalCode:"", goodsDescription:"", weightKg:"", palletCount:"", vehicleTypeRequired:"SEMI_TAUTLINER", budgetMaxCents:"", pickupDateRequested:"", deliveryDateRequested:"" });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const u = (k,v) => setForm(f => ({...f,[k]:v}));
-
-  const submit = async () => {
-    setSaving(true); setError("");
-    try {
-      await api("/missions", { method:"POST", body:JSON.stringify({ ...form, weightKg:form.weightKg?Number(form.weightKg):undefined, palletCount:form.palletCount?Number(form.palletCount):undefined, budgetMaxCents:form.budgetMaxCents?Number(form.budgetMaxCents)*100:undefined }) });
-      setPage("missions");
-    } catch(e) { setError(e.message); }
-    setSaving(false);
-  };
-
-  return (
-    <div style={{ maxWidth:700 }}>
-      <h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Nouvelle mission</h1>
-      <Card style={{ marginBottom:20 }}>
-        <h3 style={{ color:"#f97316", fontSize:14, fontWeight:700, marginBottom:14 }}>Enlèvement</h3>
-        <Input label="Adresse" value={form.pickupAddress} onChange={e => u("pickupAddress",e.target.value)} />
-        <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:12 }}><Input label="Ville" value={form.pickupCity} onChange={e => u("pickupCity",e.target.value)} /><Input label="Code postal" value={form.pickupPostalCode} onChange={e => u("pickupPostalCode",e.target.value)} /></div>
-        <Input label="Date souhaitée" type="datetime-local" value={form.pickupDateRequested} onChange={e => u("pickupDateRequested",e.target.value)} />
+          <Input label="Nom entreprise" required value={f.companyName} onChange={e=>u("companyName",e.target.value)}/>
+          <Input label="SIREN" value={f.siren} onChange={e=>u("siren",e.target.value.replace(/\D/g,"").slice(0,9))}/>
+          <Input label="Adresse" required value={f.address} onChange={e=>u("address",e.target.value)}/>
+          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12}}><Input label="Ville" required value={f.city} onChange={e=>u("city",e.target.value)}/><Input label="Code postal" required value={f.postalCode} onChange={e=>u("postalCode",e.target.value.replace(/\D/g,"").slice(0,5))}/></div>
+          <Err msg={err}/><div style={{display:"flex",gap:12}}><Btn variant="secondary" onClick={()=>setStep(1)} size="lg" style={{flex:1}}>← Retour</Btn><Btn onClick={go} disabled={ld||!f.companyName||!f.siret} size="lg" style={{flex:2}}>{ld?"Création...":"Créer mon compte"}</Btn></div>
+        </div>}
       </Card>
-      <Card style={{ marginBottom:20 }}>
-        <h3 style={{ color:"#22c55e", fontSize:14, fontWeight:700, marginBottom:14 }}>Livraison</h3>
-        <Input label="Adresse" value={form.deliveryAddress} onChange={e => u("deliveryAddress",e.target.value)} />
-        <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:12 }}><Input label="Ville" value={form.deliveryCity} onChange={e => u("deliveryCity",e.target.value)} /><Input label="Code postal" value={form.deliveryPostalCode} onChange={e => u("deliveryPostalCode",e.target.value)} /></div>
-        <Input label="Date souhaitée" type="datetime-local" value={form.deliveryDateRequested} onChange={e => u("deliveryDateRequested",e.target.value)} />
-      </Card>
-      <Card style={{ marginBottom:20 }}>
-        <h3 style={{ color:"#60a5fa", fontSize:14, fontWeight:700, marginBottom:14 }}>Marchandise</h3>
-        <Input label="Description" value={form.goodsDescription} onChange={e => u("goodsDescription",e.target.value)} placeholder="Ex: 18 palettes produits alimentaires" />
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
-          <Input label="Poids (kg)" type="number" value={form.weightKg} onChange={e => u("weightKg",e.target.value)} />
-          <Input label="Palettes" type="number" value={form.palletCount} onChange={e => u("palletCount",e.target.value)} />
-          <Input label="Budget max (€)" type="number" value={form.budgetMaxCents} onChange={e => u("budgetMaxCents",e.target.value)} />
-        </div>
-        <Select label="Type de véhicule" value={form.vehicleTypeRequired} onChange={e => u("vehicleTypeRequired",e.target.value)} options={Object.entries(vehicleLabels).map(([k,v]) => ({ value:k, label:v }))} />
-      </Card>
-      <ErrorMsg msg={error} />
-      <div style={{ display:"flex", gap:12 }}><Btn variant="secondary" onClick={() => setPage("missions")}>Annuler</Btn><Btn onClick={submit} disabled={saving||!form.pickupCity||!form.deliveryCity}>{saving?"Création...":"Créer la mission"}</Btn></div>
+      <div style={{textAlign:"center",marginTop:20}}><span style={{fontSize:13,color:"#64748b"}}>Déjà inscrit ? </span><span onClick={onLogin} style={{fontSize:13,color:"#f97316",cursor:"pointer",fontWeight:600}}>Se connecter</span></div>
     </div>
-  );
+  </div>;
 };
 
-// ═══ FREIGHT EXCHANGE (BOURSE DE FRET) ═══
-const FreightExchangePage = ({ api, user, setPage, setSelectedMission }) => {
-  const [missions, setMissions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [bidMission, setBidMission] = useState(null);
-  const [bidPrice, setBidPrice] = useState("");
-  const [bidMessage, setBidMessage] = useState("");
-  const [bidLoading, setBidLoading] = useState(false);
-  const [bidResult, setBidResult] = useState("");
-  const [bidError, setBidError] = useState("");
+/* ═══ SIDEBAR ═══ */
+const Sidebar=({user,page,setPage,logout,onClose,unread})=>{
+  const isA=["ADMIN","SUPER_ADMIN"].includes(user.role),isC=user.role==="CHARGEUR",isT=user.role==="TRANSPORTEUR";
+  const items=[{key:"dashboard",icon:"📊",label:"Tableau de bord"},...(isT?[{key:"freight-exchange",icon:"📦",label:"Bourse de fret"}]:[]),{key:"missions",icon:"🚛",label:"Missions"},...(isC?[{key:"new-mission",icon:"➕",label:"Nouvelle mission"}]:[]),...(isT?[{key:"my-bids",icon:"💰",label:"Mes offres"}]:[]),...((isT||isC)?[{key:"shared-routes",icon:"🔄",label:"Partage de courses"}]:[]),...(isT?[{key:"vehicles",icon:"🚚",label:"Véhicules"},{key:"drivers",icon:"👷",label:"Conducteurs"}]:[]),{key:"wallet",icon:"💳",label:"Portefeuille"},{key:"notifications",icon:"🔔",label:"Notifications",badge:unread},{key:"profile",icon:"👤",label:"Mon profil"},...(isA?[{key:"admin",icon:"⚙️",label:"Administration"}]:[])];
+  return<div style={{width:260,minHeight:"100vh",background:"rgba(255,255,255,.02)",borderRight:"1px solid rgba(255,255,255,.06)",display:"flex",flexDirection:"column",padding:"20px 12px"}}>
+    <div style={{padding:"8px 12px",marginBottom:24,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div><span style={{fontSize:22,fontWeight:900,color:"#f97316"}}>FRET</span><span style={{fontSize:22,fontWeight:900}}>NOW</span><div style={{fontSize:10,color:"#64748b",letterSpacing:".1em"}}>v7.2.0</div></div>
+      {onClose&&<button onClick={onClose} style={{background:"none",border:"none",color:"#94a3b8",fontSize:18,cursor:"pointer"}}>✕</button>}
+    </div>
+    <div style={{flex:1,overflowY:"auto"}}>{items.map(it=><button key={it.key} onClick={()=>{setPage(it.key);if(onClose)onClose()}} style={{display:"flex",alignItems:"center",width:"100%",padding:"10px 12px",borderRadius:10,border:"none",background:page===it.key?"rgba(249,115,22,.12)":"transparent",color:page===it.key?"#f97316":"#94a3b8",fontSize:13,fontWeight:page===it.key?700:500,cursor:"pointer",fontFamily:"inherit",marginBottom:2,gap:10,position:"relative"}} onMouseEnter={e=>{if(page!==it.key)e.currentTarget.style.background="rgba(255,255,255,.04)"}} onMouseLeave={e=>{if(page!==it.key)e.currentTarget.style.background="transparent"}}>
+      <span style={{fontSize:16}}>{it.icon}</span>{it.label}
+      {it.badge>0&&<span style={{position:"absolute",right:12,background:"#ef4444",color:"#fff",fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:10}}>{it.badge}</span>}
+    </button>)}</div>
+    <div style={{borderTop:"1px solid rgba(255,255,255,.06)",paddingTop:16,marginTop:8}}>
+      <div style={{padding:"8px 12px",fontSize:12,color:"#64748b",marginBottom:8}}><div style={{fontWeight:700,color:"#e2e8f0",fontSize:13}}>{user.firstName} {user.lastName}</div><div style={{marginTop:4}}><Badge status={user.role}/></div></div>
+      <button onClick={logout} style={{display:"flex",alignItems:"center",width:"100%",padding:"10px 12px",borderRadius:10,border:"none",background:"rgba(239,68,68,.08)",color:"#f87171",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",gap:8}}>🚪 Déconnexion</button>
+    </div>
+  </div>;
+};
 
-  useEffect(() => {
-    api("/missions?status=PUBLISHED&limit=50")
-      .then(d => setMissions(d.missions||[]))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [api]);
-
-  const submitBid = async (missionId) => {
-    const cents = Math.round(parseFloat(bidPrice) * 100);
-    if (!cents || cents < 100) { setBidError("Montant minimum 1€"); return; }
-    setBidLoading(true); setBidError(""); setBidResult("");
-    try {
-      await api(`/missions/${missionId}/bids`, {
-        method: "POST",
-        body: JSON.stringify({ priceCents: cents, message: bidMessage || undefined }),
-      });
-      setBidResult("Offre envoyée !");
-      setBidPrice(""); setBidMessage("");
-      setTimeout(() => { setBidMission(null); setBidResult(""); }, 1500);
-    } catch (e) { setBidError(e.message); }
-    setBidLoading(false);
-  };
-
-  if (loading) return <Spinner />;
-
-  return (
-    <div>
-      <div style={{ marginBottom:24 }}>
-        <h1 style={{ fontSize:24, fontWeight:800 }}>📦 Bourse de fret</h1>
-        <p style={{ color:"#64748b", fontSize:14, marginTop:4 }}>Missions disponibles — Proposez votre prix et remportez le transport</p>
+/* ═══ DASHBOARD CHARGEUR ═══ */
+const DashChargeur=({api,setPage})=>{
+  const[d,setD]=useState(null);const[ms,setMs]=useState([]);const[ld,setLd]=useState(true);
+  useEffect(()=>{(async()=>{try{const[m,w]=await Promise.all([api("/missions"),api("/wallet/balance")]);setMs(m.missions||[]);setD({balance:w.balance||0})}catch(e){}setLd(false)})()},[api]);
+  if(ld)return<Spinner/>;
+  const active=ms.filter(m=>!["COMPLETED","CANCELLED","DRAFT"].includes(m.status));
+  const done=ms.filter(m=>m.status==="COMPLETED");const spent=done.reduce((s,m)=>s+(m.finalPriceCents||0),0);
+  const bidding=ms.filter(m=>["PUBLISHED","BIDDING"].includes(m.status));
+  const transit=ms.filter(m=>["PICKUP","IN_TRANSIT","ACCEPTED"].includes(m.status));
+  return<div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,flexWrap:"wrap",gap:12}}>
+      <div><h1 style={{fontSize:28,fontWeight:800}}>Tableau de bord</h1><p style={{color:"#64748b",fontSize:14,marginTop:4}}>Gérez vos expéditions et suivez vos missions</p></div>
+      <Btn onClick={()=>setPage("new-mission")} size="lg">➕ Nouvelle mission</Btn>
+    </div>
+    <div style={{display:"flex",gap:14,flexWrap:"wrap",marginBottom:28}}>
+      <StatCard icon="📦" label="Missions actives" value={active.length} accent="#60a5fa"/>
+      <StatCard icon="🏷️" label="En attente d'offres" value={bidding.length} accent="#c4b5fd"/>
+      <StatCard icon="🚛" label="En transport" value={transit.length} accent="#4ade80"/>
+      <StatCard icon="💶" label="Total dépensé" value={fmt(spent)} accent="#f97316" sub={`${done.length} missions`}/>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12,marginBottom:28}}>
+      <Card onClick={()=>setPage("new-mission")} style={{padding:16,textAlign:"center",borderColor:"rgba(249,115,22,.2)",background:"rgba(249,115,22,.04)"}}><div style={{fontSize:28}}>📝</div><div style={{fontSize:13,fontWeight:700,color:"#f97316",marginTop:4}}>Publier une mission</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>Recevez des offres en minutes</div></Card>
+      <Card onClick={()=>setPage("missions")} style={{padding:16,textAlign:"center"}}><div style={{fontSize:28}}>📋</div><div style={{fontSize:13,fontWeight:700,marginTop:4}}>Toutes mes missions</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>{ms.length} au total</div></Card>
+      <Card onClick={()=>setPage("wallet")} style={{padding:16,textAlign:"center"}}><div style={{fontSize:28}}>💳</div><div style={{fontSize:13,fontWeight:700,marginTop:4}}>Portefeuille</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>Solde : {fmt(d?.balance||0)}</div></Card>
+    </div>
+    <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>Missions récentes</h3>
+    {ms.length===0?<Empty icon="📦" title="Aucune mission" desc="Publiez votre première mission pour recevoir des offres de transporteurs vérifiés." action="Créer ma première mission" onAction={()=>setPage("new-mission")}/>:
+    <div style={{display:"flex",flexDirection:"column",gap:8}}>{[...active,...done].slice(0,6).map(m=><Card key={m.id} onClick={()=>setPage({id:"mission-detail",mid:m.id})} style={{padding:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+        <div><div style={{fontSize:14,fontWeight:700}}>{m.pickupCity} → {m.deliveryCity}</div><div style={{fontSize:12,color:"#64748b",marginTop:2}}>{m.goodsDescription||"—"} • {kms(m.distanceKm)} • {fmtShort(m.pickupDateRequested)}</div></div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>{m.bids?.length>0&&<span style={{fontSize:11,color:"#c4b5fd",background:"rgba(139,92,246,.1)",padding:"2px 8px",borderRadius:6,fontWeight:600}}>{m.bids.length} offre{m.bids.length>1?"s":""}</span>}<Badge status={m.status}/></div>
       </div>
-
-      {missions.length === 0 ? (
-        <Card style={{ textAlign:"center", padding:40 }}>
-          <div style={{ fontSize:40, marginBottom:12 }}>🚛</div>
-          <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>Aucune mission disponible</div>
-          <div style={{ color:"#64748b", fontSize:14 }}>Les nouvelles missions des chargeurs apparaîtront ici.<br/>Revenez régulièrement pour ne rien manquer !</div>
-        </Card>
-      ) : (
-        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          {missions.map(m => (
-            <Card key={m.id} style={{ padding:20 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12 }}>
-                <div style={{ flex:1, minWidth:250, cursor:"pointer" }} onClick={() => { setSelectedMission(m.id); setPage("mission-detail"); }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-                    <Badge status={m.status} />
-                    <span style={{ fontSize:12, color:"#64748b", fontFamily:"monospace" }}>{m.reference}</span>
-                    {m._count?.bids > 0 && <span style={{ fontSize:11, padding:"2px 8px", borderRadius:4, background:"rgba(249,115,22,0.15)", color:"#f97316", fontWeight:700 }}>{m._count.bids} offre{m._count.bids>1?"s":""}</span>}
-                  </div>
-                  <div style={{ fontSize:18, fontWeight:800, marginBottom:4 }}>{m.pickupCity} → {m.deliveryCity}</div>
-                  <div style={{ fontSize:13, color:"#94a3b8" }}>
-                    {m.goodsDescription||"Marchandise"}
-                    {m.weightKg ? ` • ${(m.weightKg/1000).toFixed(1)}t` : ""}
-                    {m.palletCount ? ` • ${m.palletCount} pal.` : ""}
-                    {m.vehicleTypeRequired ? ` • ${vehicleLabels[m.vehicleTypeRequired]||m.vehicleTypeRequired}` : ""}
-                  </div>
-                  <div style={{ display:"flex", gap:16, marginTop:8, fontSize:12, color:"#64748b" }}>
-                    {m.pickupDateRequested && <span>📅 {fmtDate(m.pickupDateRequested)}</span>}
-                    {m.distanceKm && <span>📍 {m.distanceKm} km</span>}
-                  </div>
-                </div>
-                <div style={{ textAlign:"right", minWidth:150 }}>
-                  <div style={{ fontSize:24, fontWeight:900, color:"#fbbf24" }}>{fmt(m.budgetMaxCents)}</div>
-                  <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>Budget max</div>
-                  {m.distanceKm && m.budgetMaxCents && (
-                    <div style={{ fontSize:12, color:"#94a3b8", marginTop:4 }}>{((m.budgetMaxCents/100)/m.distanceKm).toFixed(2)} €/km</div>
-                  )}
-                  <div style={{ marginTop:12 }}>
-                    {bidMission === m.id ? (
-                      <div style={{ textAlign:"left" }}>
-                        <div style={{ marginBottom:8 }}>
-                          <input type="number" value={bidPrice} onChange={e => setBidPrice(e.target.value)} placeholder="Votre prix (€)"
-                            style={{ width:"100%", padding:"8px 12px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:8, color:"#e2e8f0", fontSize:14, outline:"none" }} />
-                        </div>
-                        <div style={{ marginBottom:8 }}>
-                          <input type="text" value={bidMessage} onChange={e => setBidMessage(e.target.value)} placeholder="Message (optionnel)"
-                            style={{ width:"100%", padding:"8px 12px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:8, color:"#e2e8f0", fontSize:13, outline:"none" }} />
-                        </div>
-                        {bidError && <div style={{ fontSize:12, color:"#f87171", marginBottom:6 }}>{bidError}</div>}
-                        {bidResult && <div style={{ fontSize:12, color:"#22c55e", marginBottom:6 }}>✅ {bidResult}</div>}
-                        <div style={{ display:"flex", gap:6 }}>
-                          <Btn variant="success" size="sm" disabled={bidLoading} onClick={() => submitBid(m.id)}>{bidLoading ? "..." : "Envoyer"}</Btn>
-                          <Btn variant="ghost" size="sm" onClick={() => { setBidMission(null); setBidError(""); setBidResult(""); }}>Annuler</Btn>
-                        </div>
-                      </div>
-                    ) : (
-                      <Btn size="sm" onClick={() => { setBidMission(m.id); setBidPrice(""); setBidMessage(""); setBidError(""); setBidResult(""); }}>💰 Faire une offre</Btn>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+    </Card>)}</div>}
+  </div>;
 };
 
-// ═══ SIMPLE LIST PAGES ═══
-const MyBidsPage = ({ api }) => { const [bids, setBids] = useState([]); const [l, sL] = useState(true); useEffect(() => { api("/bids/mine").then(d => setBids(Array.isArray(d)?d:d.bids||[])).catch(console.error).finally(() => sL(false)); }, [api]); if(l) return <Spinner />; return (<div><h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Mes offres</h1>{bids.map(b => (<Card key={b.id} style={{ marginBottom:8 }}><div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}><div><Badge status={b.status} />{b.mission && <span style={{ fontSize:14, fontWeight:600, marginLeft:8 }}>{b.mission.pickupCity} → {b.mission.deliveryCity}</span>}</div><div style={{ fontSize:22, fontWeight:800, color:b.status==="ACCEPTED"?"#22c55e":"#e2e8f0" }}>{fmt(b.priceCents)}</div></div></Card>))}{bids.length===0 && <Card><div style={{ textAlign:"center", color:"#64748b", padding:20 }}>Aucune offre</div></Card>}</div>); };
+/* ═══ DASHBOARD TRANSPORTEUR ═══ */
+const DashTransporteur=({api,setPage,user})=>{
+  const[ms,setMs]=useState([]);const[bids,setBids]=useState([]);const[wal,setWal]=useState(null);const[exch,setExch]=useState([]);const[ld,setLd]=useState(true);
+  useEffect(()=>{(async()=>{try{const[m,b,w]=await Promise.all([api("/missions"),api("/bids/mine"),api("/wallet/balance")]);setMs(m.missions||[]);setBids(b.bids||[]);setWal(w);setExch((m.missions||[]).filter(x=>["PUBLISHED","BIDDING"].includes(x.status)&&x.clientId!==user.id))}catch(e){}setLd(false)})()},[api]);
+  if(ld)return<Spinner/>;
+  const myMs=ms.filter(m=>m.bids?.some(b=>b.transporteurId===user.id&&b.status!=="REJECTED"));
+  const actMs=myMs.filter(m=>["ACCEPTED","PICKUP","IN_TRANSIT"].includes(m.status));
+  const doneMs=myMs.filter(m=>m.status==="COMPLETED");
+  const earned=doneMs.reduce((s,m)=>s+(m.finalPriceCents||0),0);
+  const pendBids=bids.filter(b=>b.status==="PENDING");
+  return<div>
+    <div style={{marginBottom:24}}><h1 style={{fontSize:28,fontWeight:800}}>Tableau de bord</h1><p style={{color:"#64748b",fontSize:14,marginTop:4}}>Trouvez du fret, gérez vos missions et optimisez vos revenus</p></div>
+    <div style={{display:"flex",gap:14,flexWrap:"wrap",marginBottom:28}}>
+      <StatCard icon="💶" label="Revenus totaux" value={fmt(earned)} accent="#22c55e" sub={`${doneMs.length} missions`}/>
+      <StatCard icon="🚛" label="En cours" value={actMs.length} accent="#60a5fa"/>
+      <StatCard icon="💰" label="Offres en attente" value={pendBids.length} accent="#fbbf24"/>
+      <StatCard icon="📦" label="Fret disponible" value={exch.length} accent="#c4b5fd"/>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:28}}>
+      <Card onClick={()=>setPage("freight-exchange")} style={{padding:16,textAlign:"center",borderColor:"rgba(249,115,22,.2)",background:"rgba(249,115,22,.04)"}}><div style={{fontSize:28}}>🔍</div><div style={{fontSize:13,fontWeight:700,color:"#f97316",marginTop:4}}>Trouver du fret</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>{exch.length} annonce{exch.length>1?"s":""}</div></Card>
+      <Card onClick={()=>setPage("shared-routes")} style={{padding:16,textAlign:"center",borderColor:"rgba(6,182,212,.2)",background:"rgba(6,182,212,.04)"}}><div style={{fontSize:28}}>🔄</div><div style={{fontSize:13,fontWeight:700,color:"#06b6d4",marginTop:4}}>Partager un trajet</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>Rentabilisez vos retours</div></Card>
+      <Card onClick={()=>setPage("my-bids")} style={{padding:16,textAlign:"center"}}><div style={{fontSize:28}}>💰</div><div style={{fontSize:13,fontWeight:700,marginTop:4}}>Mes offres</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>{pendBids.length} en attente</div></Card>
+      <Card onClick={()=>setPage("wallet")} style={{padding:16,textAlign:"center"}}><div style={{fontSize:28}}>💳</div><div style={{fontSize:13,fontWeight:700,marginTop:4}}>Portefeuille</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>{fmt(wal?.balance||0)}</div></Card>
+    </div>
+    {actMs.length>0&&<><h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>🚛 Missions en cours</h3><div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:24}}>{actMs.map(m=><Card key={m.id} onClick={()=>setPage({id:"mission-detail",mid:m.id})} style={{padding:16}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}><div><div style={{fontSize:14,fontWeight:700}}>{m.pickupCity} → {m.deliveryCity}</div><div style={{fontSize:12,color:"#64748b",marginTop:2}}>{kms(m.distanceKm)} • {fmtShort(m.pickupDateRequested)}</div></div><div style={{display:"flex",alignItems:"center",gap:8}}>{m.finalPriceCents&&<span style={{fontWeight:700,color:"#22c55e"}}>{fmt(m.finalPriceCents)}</span>}<Badge status={m.status}/></div></div></Card>)}</div></>}
+    {exch.length>0&&<><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><h3 style={{fontSize:16,fontWeight:700}}>📦 Fret disponible</h3><Btn variant="ghost" size="sm" onClick={()=>setPage("freight-exchange")}>Voir tout →</Btn></div><div style={{display:"flex",flexDirection:"column",gap:8}}>{exch.slice(0,4).map(m=><Card key={m.id} onClick={()=>setPage({id:"mission-detail",mid:m.id})} style={{padding:14}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}><div><div style={{fontSize:13,fontWeight:700}}>{m.pickupCity} → {m.deliveryCity}</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>{m.goodsDescription||"Marchandises"} • {kms(m.distanceKm)}</div></div><div style={{textAlign:"right"}}>{m.budgetMaxCents&&<div style={{fontWeight:700,color:"#f97316"}}>{fmt(m.budgetMaxCents)}</div>}<div style={{fontSize:11,color:"#64748b"}}>{fmtShort(m.pickupDateRequested)}</div></div></div></Card>)}</div></>}
+  </div>;
+};
 
-const VehiclesPage = ({ api }) => { const [v, sV] = useState([]); const [l, sL] = useState(true); useEffect(() => { api("/vehicles").then(d => sV(Array.isArray(d)?d:d.vehicles||[])).catch(console.error).finally(() => sL(false)); }, [api]); if(l) return <Spinner />; return (<div><h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Véhicules</h1><div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px, 1fr))", gap:14 }}>{v.map(v => (<Card key={v.id}><div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}><div><div style={{ fontSize:15, fontWeight:700 }}>{v.brand} {v.model}</div><div style={{ fontSize:12, color:"#64748b" }}>{vehicleLabels[v.type]||v.type}</div></div><div style={{ padding:"4px 10px", borderRadius:6, fontSize:12, fontWeight:700, fontFamily:"monospace", background:"rgba(249,115,22,0.1)", color:"#f97316" }}>{v.licensePlate}</div></div><div style={{ fontSize:12, color:"#94a3b8" }}>{(v.capacityKg/1000).toFixed(1)}t {v.volumeM3?`• ${v.volumeM3}m³`:""} {v.palletSpots?`• ${v.palletSpots} pal.`:""}</div></Card>))}{v.length===0 && <div style={{ color:"#64748b", padding:40, textAlign:"center" }}>Aucun véhicule</div>}</div></div>); };
+/* ═══ MISSIONS LIST ═══ */
+const MissionsPage=({api,user,setPage})=>{
+  const[ms,setMs]=useState([]);const[ld,setLd]=useState(true);const[q,setQ]=useState("");const[fSt,setFSt]=useState("ALL");
+  useEffect(()=>{(async()=>{try{const d=await api("/missions");setMs(d.missions||[])}catch(e){}setLd(false)})()},[api]);
+  if(ld)return<Spinner/>;
+  const sts=["ALL",...new Set(ms.map(m=>m.status))];
+  const fl=ms.filter(m=>{if(fSt!=="ALL"&&m.status!==fSt)return false;if(q){const s=q.toLowerCase();return(m.pickupCity+m.deliveryCity+(m.goodsDescription||"")+(m.reference||"")).toLowerCase().includes(s)}return true});
+  return<div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:12}}>
+      <h1 style={{fontSize:24,fontWeight:800}}>Missions</h1>
+      {user.role==="CHARGEUR"&&<Btn onClick={()=>setPage("new-mission")}>➕ Nouvelle mission</Btn>}
+    </div>
+    <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap"}}>
+      <input type="text" value={q} onChange={e=>setQ(e.target.value)} placeholder="🔍 Rechercher ville, description, référence..." style={{flex:1,minWidth:200,padding:"10px 16px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.12)",borderRadius:10,color:"#e2e8f0",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+      <select value={fSt} onChange={e=>setFSt(e.target.value)} style={{padding:"10px 16px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.12)",borderRadius:10,color:"#e2e8f0",fontSize:13}}>
+        {sts.map(s=><option key={s} value={s} style={{background:"#1a1a2e"}}>{s==="ALL"?`Tous (${ms.length})`:`${(STA[s]||{l:s}).l} (${ms.filter(m=>m.status===s).length})`}</option>)}
+      </select>
+    </div>
+    {fl.length===0?<Empty icon="🚛" title="Aucune mission" desc={q?"Aucun résultat":"Vos missions apparaîtront ici"} action={user.role==="CHARGEUR"?"Créer une mission":null} onAction={()=>setPage("new-mission")}/>:
+    <div style={{display:"flex",flexDirection:"column",gap:8}}>{fl.map(m=><Card key={m.id} onClick={()=>setPage({id:"mission-detail",mid:m.id})} style={{padding:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+        <div style={{flex:1,minWidth:200}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}><Badge status={m.status}/><span style={{fontSize:11,color:"#64748b"}}>#{(m.reference||m.id).slice(-6)}</span></div>
+          <div style={{fontSize:15,fontWeight:700,marginTop:6}}>{m.pickupCity} → {m.deliveryCity}</div>
+          <div style={{fontSize:12,color:"#64748b",marginTop:2}}>{m.goodsDescription||"—"} • {kms(m.distanceKm)} • {VT[m.vehicleTypeRequired]||"—"}</div>
+        </div>
+        <div style={{textAlign:"right"}}>{(m.finalPriceCents||m.budgetMaxCents)&&<div style={{fontSize:16,fontWeight:700,color:"#f97316"}}>{fmt(m.finalPriceCents||m.budgetMaxCents)}</div>}<div style={{fontSize:11,color:"#64748b"}}>{fmtShort(m.pickupDateRequested)}</div>{m.bids?.length>0&&<div style={{fontSize:11,color:"#c4b5fd",marginTop:2}}>{m.bids.length} offre{m.bids.length>1?"s":""}</div>}</div>
+      </div>
+    </Card>)}</div>}
+  </div>;
+};
 
-const DriversPage = ({ api }) => { const [d, sD] = useState([]); const [l, sL] = useState(true); useEffect(() => { api("/drivers").then(d => sD(Array.isArray(d)?d:d.drivers||[])).catch(console.error).finally(() => sL(false)); }, [api]); if(l) return <Spinner />; return (<div><h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Conducteurs</h1><div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(300px, 1fr))", gap:14 }}>{d.map(d => (<Card key={d.id}><div style={{ display:"flex", alignItems:"center", gap:12 }}><div style={{ width:44, height:44, borderRadius:"50%", background:"linear-gradient(135deg,#f97316,#ea580c)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:800, color:"#fff" }}>{d.firstName?.[0]}{d.lastName?.[0]}</div><div><div style={{ fontSize:15, fontWeight:700 }}>{d.firstName} {d.lastName}</div><div style={{ fontSize:12, color:"#94a3b8" }}>{d.phone}</div></div></div></Card>))}{d.length===0 && <div style={{ color:"#64748b", padding:40, textAlign:"center" }}>Aucun conducteur</div>}</div></div>); };
+/* ═══ MISSION DETAIL ═══ */
+const MissionDetail=({api,user,mid,setPage})=>{
+  const[m,setM]=useState(null);const[ld,setLd]=useState(true);const[err,setErr]=useState("");const[ok,setOk]=useState("");
+  const[bidAmt,setBidAmt]=useState("");const[bidMsg,setBidMsg]=useState("");const[bidLd,setBidLd]=useState(false);
+  const load=async()=>{try{const d=await api(`/missions/${mid}`);setM(d.mission||d)}catch(e){setErr(e.message)}setLd(false)};
+  useEffect(()=>{load()},[mid]);
+  if(ld)return<Spinner/>;if(!m)return<Err msg={err||"Mission non trouvée"}/>;
+  const isOwner=m.clientId===user.id,isT=user.role==="TRANSPORTEUR";
+  const myBid=m.bids?.find(b=>b.transporteurId===user.id);
+  const doAct=async(a,body={})=>{setErr("");setOk("");try{await api(`/missions/${mid}/${a}`,{method:"POST",body:JSON.stringify(body)});setOk("Action effectuée");await load()}catch(e){setErr(e.message)}};
+  const doBid=async()=>{setErr("");setBidLd(true);try{await api("/bids",{method:"POST",body:JSON.stringify({missionId:mid,priceCents:Math.round(parseFloat(bidAmt)*100),message:bidMsg||undefined})});setOk("Offre soumise !");await load()}catch(e){setErr(e.message)}setBidLd(false)};
 
-const NotificationsPage = ({ api }) => { const [n, sN] = useState([]); const [l, sL] = useState(true); useEffect(() => { api("/notifications").then(d => sN(Array.isArray(d)?d:d.notifications||[])).catch(console.error).finally(() => sL(false)); }, [api]); if(l) return <Spinner />; return (<div><h1 style={{ fontSize:24, fontWeight:800, marginBottom:24 }}>Notifications</h1>{n.map(n => (<Card key={n.id} style={{ marginBottom:8, opacity:n.isRead?0.6:1 }}><div style={{ display:"flex", alignItems:"flex-start", gap:12 }}><div style={{ fontSize:20 }}>{n.type?.includes("PAYMENT")?"💰":n.type?.includes("BID")?"💬":"🔔"}</div><div style={{ flex:1 }}><div style={{ fontSize:14, fontWeight:600 }}>{n.title}</div><div style={{ fontSize:13, color:"#94a3b8", marginTop:2 }}>{n.message}</div><div style={{ fontSize:11, color:"#64748b", marginTop:4 }}>{fmtDateTime(n.createdAt)}</div></div></div></Card>))}{n.length===0 && <Card><div style={{ textAlign:"center", color:"#64748b", padding:20 }}>Aucune notification</div></Card>}</div>); };
+  return<div>
+    <Btn variant="ghost" size="sm" onClick={()=>setPage("missions")} style={{marginBottom:16}}>← Retour aux missions</Btn>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12,marginBottom:20}}>
+      <div><Badge status={m.status} size="lg"/><h1 style={{fontSize:24,fontWeight:800,marginTop:8}}>{m.pickupCity} → {m.deliveryCity}</h1><div style={{color:"#64748b",fontSize:13,marginTop:4}}>Ref: #{(m.reference||m.id).slice(-8)} • {fmtDate(m.createdAt)}</div></div>
+      {(m.finalPriceCents||m.budgetMaxCents)&&<div style={{textAlign:"right"}}><div style={{fontSize:11,color:"#64748b"}}>{m.finalPriceCents?"Prix final":"Budget max"}</div><div style={{fontSize:28,fontWeight:800,color:"#f97316"}}>{fmt(m.finalPriceCents||m.budgetMaxCents)}</div></div>}
+    </div>
+    <Err msg={err}/><Ok msg={ok}/>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:16,marginBottom:20}}>
+      <Card><h3 style={{fontSize:14,fontWeight:700,marginBottom:12,color:"#f97316"}}>📍 Itinéraire</h3>
+        <div style={{borderLeft:"2px solid rgba(249,115,22,.3)",paddingLeft:16,marginLeft:8}}>
+          <div style={{marginBottom:16}}><div style={{fontSize:11,color:"#64748b",textTransform:"uppercase"}}>Enlèvement</div><div style={{fontWeight:700,fontSize:14}}>{m.pickupAddress}</div><div style={{fontSize:12,color:"#94a3b8"}}>{m.pickupPostalCode} {m.pickupCity}</div>{m.pickupDateRequested&&<div style={{fontSize:12,color:"#06b6d4",marginTop:4}}>📅 {fmtDT(m.pickupDateRequested)}</div>}{m.pickupContact&&<div style={{fontSize:12,color:"#64748b"}}>👤 {m.pickupContact}</div>}{m.pickupInstructions&&<div style={{fontSize:12,color:"#94a3b8",fontStyle:"italic",marginTop:2}}>💡 {m.pickupInstructions}</div>}</div>
+          <div><div style={{fontSize:11,color:"#64748b",textTransform:"uppercase"}}>Livraison</div><div style={{fontWeight:700,fontSize:14}}>{m.deliveryAddress}</div><div style={{fontSize:12,color:"#94a3b8"}}>{m.deliveryPostalCode} {m.deliveryCity}</div>{m.deliveryDateRequested&&<div style={{fontSize:12,color:"#06b6d4",marginTop:4}}>📅 {fmtDT(m.deliveryDateRequested)}</div>}{m.deliveryContact&&<div style={{fontSize:12,color:"#64748b"}}>👤 {m.deliveryContact}</div>}{m.deliveryInstructions&&<div style={{fontSize:12,color:"#94a3b8",fontStyle:"italic",marginTop:2}}>💡 {m.deliveryInstructions}</div>}</div>
+        </div>
+        {m.distanceKm&&<div style={{display:"flex",gap:16,marginTop:16,padding:"10px 14px",background:"rgba(255,255,255,.03)",borderRadius:8}}><div><div style={{fontSize:11,color:"#64748b"}}>Distance</div><div style={{fontWeight:700}}>{kms(m.distanceKm)}</div></div>{m.durationMinutes&&<div><div style={{fontSize:11,color:"#64748b"}}>Durée</div><div style={{fontWeight:700}}>{Math.floor(m.durationMinutes/60)}h{String(m.durationMinutes%60).padStart(2,"0")}</div></div>}{m.tolls!=null&&<div><div style={{fontSize:11,color:"#64748b"}}>Péages</div><div style={{fontWeight:700}}>{fmt(m.tolls*100)}</div></div>}</div>}
+      </Card>
+      <Card><h3 style={{fontSize:14,fontWeight:700,marginBottom:12,color:"#f97316"}}>📦 Marchandise</h3>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          {[["Description",m.goodsDescription],["Véhicule",VT[m.vehicleTypeRequired]],["Poids",m.weightKg?`${m.weightKg} kg`:null],["Volume",m.volumeM3?`${m.volumeM3} m³`:null],["Palettes",m.palletCount],["Valeur",m.goodsValue?fmt(m.goodsValue*100):null]].map(([l,v])=><div key={l}><div style={{fontSize:11,color:"#64748b"}}>{l}</div><div style={{fontWeight:600,fontSize:13}}>{v||"—"}</div></div>)}
+        </div>
+        <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}}>
+          {m.isFragile&&<span style={{padding:"3px 10px",borderRadius:6,fontSize:11,background:"rgba(239,68,68,.1)",color:"#f87171",fontWeight:600}}>🔴 Fragile</span>}
+          {m.isADR&&<span style={{padding:"3px 10px",borderRadius:6,fontSize:11,background:"rgba(239,68,68,.1)",color:"#f87171",fontWeight:600}}>☢️ ADR</span>}
+          {m.requiresTemp&&<span style={{padding:"3px 10px",borderRadius:6,fontSize:11,background:"rgba(6,182,212,.1)",color:"#06b6d4",fontWeight:600}}>❄️ {m.tempMin}°–{m.tempMax}°</span>}
+          {m.isStackable&&<span style={{padding:"3px 10px",borderRadius:6,fontSize:11,background:"rgba(34,197,94,.1)",color:"#22c55e",fontWeight:600}}>📐 Gerbable</span>}
+        </div>
+      </Card>
+    </div>
 
-const AdminUsersPage = ({ api }) => {
-  const [d, sD] = useState({ users:[] });
-  const [l, sL] = useState(true);
-  const [actionLoading, setActionLoading] = useState(null);
-  const [msg, setMsg] = useState("");
-  const [filter, setFilter] = useState("all");
+    {isOwner&&<Card style={{marginBottom:16}}><h3 style={{fontSize:14,fontWeight:700,marginBottom:12}}>⚡ Actions</h3><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+      {m.status==="DRAFT"&&<Btn onClick={()=>doAct("publish")}>📢 Publier</Btn>}
+      {["DRAFT","PUBLISHED"].includes(m.status)&&<Btn variant="danger" onClick={()=>doAct("status",{status:"CANCELLED"})}>Annuler</Btn>}
+    </div></Card>}
 
-  const loadUsers = () => { sL(true); api("/admin/users?limit=100").then(sD).catch(console.error).finally(() => sL(false)); };
-  useEffect(() => { loadUsers(); }, [api]);
+    {isT&&!myBid&&["PUBLISHED","BIDDING"].includes(m.status)&&<Card style={{marginBottom:16,borderColor:"rgba(249,115,22,.2)"}}>
+      <h3 style={{fontSize:14,fontWeight:700,marginBottom:12,color:"#f97316"}}>💰 Soumettre une offre</h3>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:12}}>
+        <Input label="Prix (€ HT)" required type="number" value={bidAmt} onChange={e=>setBidAmt(e.target.value)} placeholder="Ex: 450" style={{marginBottom:0}}/>
+        <Input label="Message (optionnel)" value={bidMsg} onChange={e=>setBidMsg(e.target.value)} placeholder="Véhicule dispo, délais..." style={{marginBottom:0}}/>
+      </div>
+      <Btn onClick={doBid} disabled={bidLd||!bidAmt} style={{marginTop:12}}>{bidLd?"Envoi...":"Envoyer mon offre"}</Btn>
+    </Card>}
+    {myBid&&<Card style={{marginBottom:16,borderColor:"rgba(34,197,94,.2)"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><h3 style={{fontSize:14,fontWeight:700,color:"#22c55e"}}>✅ Votre offre</h3><div style={{fontSize:13,marginTop:4}}>{fmt(myBid.priceCents)}{myBid.message&&` — "${myBid.message}"`}</div></div><Badge status={myBid.status}/></div></Card>}
 
-  const doAction = async (id, action, label) => {
-    if (action === "delete" && !confirm(`Supprimer cet utilisateur ? Cette action est irr\u00e9versible.`)) return;
-    setActionLoading(id + action); setMsg("");
-    try {
-      const method = action === "delete" ? "DELETE" : "POST";
-      const path = action === "delete" ? `/admin/users/${id}` : `/admin/users/${id}/${action}`;
-      const r = await api(path, { method });
-      setMsg(r.message || `Action ${label} effectu\u00e9e`);
-      loadUsers();
-    } catch (e) { setMsg(`Erreur: ${e.message}`); }
-    setActionLoading(null);
-  };
+    {isOwner&&m.bids?.length>0&&<Card style={{marginBottom:16}}>
+      <h3 style={{fontSize:14,fontWeight:700,marginBottom:12}}>💰 Offres ({m.bids.length})</h3>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>{m.bids.sort((a,b)=>a.priceCents-b.priceCents).map(b=><div key={b.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",background:"rgba(255,255,255,.03)",borderRadius:10}}>
+        <div><div style={{fontWeight:700,fontSize:14}}>{b.transporteur?.firstName} {b.transporteur?.lastName}</div><div style={{fontSize:12,color:"#64748b"}}>{b.transporteur?.company?.name||"—"}{b.transporteur?.company?.isVerified&&" ✅"}</div>{b.message&&<div style={{fontSize:12,color:"#94a3b8",marginTop:2,fontStyle:"italic"}}>"{b.message}"</div>}</div>
+        <div style={{textAlign:"right",display:"flex",alignItems:"center",gap:12}}><div><div style={{fontSize:18,fontWeight:800,color:"#22c55e"}}>{fmt(b.priceCents)}</div><Badge status={b.status}/></div>
+          {b.status==="PENDING"&&["PUBLISHED","BIDDING"].includes(m.status)&&<Btn size="sm" onClick={()=>doAct("assign",{bidId:b.id})}>✓ Accepter</Btn>}
+        </div>
+      </div>)}</div>
+    </Card>}
 
-  if (l) return <Spinner />;
-  const roleIcons = { SUPER_ADMIN:"\ud83d\udd34", ADMIN:"\ud83d\udfe0", TRANSPORTEUR:"\ud83d\udfe2", CHARGEUR:"\ud83d\udfe1" };
-  const roleLabels = { SUPER_ADMIN:"Admin", ADMIN:"Admin", TRANSPORTEUR:"Transporteur", CHARGEUR:"Chargeur" };
+    {isT&&myBid?.status==="ACCEPTED"&&<Card><h3 style={{fontSize:14,fontWeight:700,marginBottom:12}}>🚛 Avancement</h3><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+      {m.status==="ACCEPTED"&&<Btn variant="cyan" onClick={()=>doAct("status",{status:"PICKUP"})}>📍 Enlèvement commencé</Btn>}
+      {m.status==="PICKUP"&&<Btn variant="cyan" onClick={()=>doAct("status",{status:"IN_TRANSIT"})}>🚛 En route</Btn>}
+      {m.status==="IN_TRANSIT"&&<Btn variant="success" onClick={()=>doAct("status",{status:"DELIVERED"})}>✅ Livré</Btn>}
+    </div></Card>}
+  </div>;
+};
 
-  const filteredUsers = (d.users || []).filter(u => {
-    if (filter === "all") return true;
-    if (filter === "pending") return u.status === "PENDING_VERIFICATION";
-    if (filter === "transporteur") return u.role === "TRANSPORTEUR";
-    if (filter === "chargeur") return u.role === "CHARGEUR";
-    if (filter === "admin") return ["ADMIN","SUPER_ADMIN"].includes(u.role);
+/* ═══ NEW MISSION ═══ */
+const NewMission=({api,setPage})=>{
+  const[step,setStep]=useState(1);const[err,setErr]=useState("");const[ld,setLd]=useState(false);
+  const[f,sF]=useState({pickupAddress:"",pickupCity:"",pickupPostalCode:"",pickupLat:null,pickupLon:null,pickupContact:"",pickupPhone:"",pickupInstructions:"",pickupDateRequested:"",deliveryAddress:"",deliveryCity:"",deliveryPostalCode:"",deliveryLat:null,deliveryLon:null,deliveryContact:"",deliveryPhone:"",deliveryInstructions:"",deliveryDateRequested:"",goodsDescription:"",weightKg:"",volumeM3:"",palletCount:"",vehicleTypeRequired:"",budgetMaxCents:"",isFragile:false,isStackable:true,requiresTemp:false,isADR:false,notes:""});
+  const[est,setEst]=useState(null);const u=(k,v)=>sF(x=>({...x,[k]:v}));
+
+  useEffect(()=>{if(f.pickupLat&&f.deliveryLat){(async()=>{try{const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${f.pickupLon},${f.pickupLat};${f.deliveryLon},${f.deliveryLat}?overview=false`);const d=await r.json();if(d.routes?.[0]){const rt=d.routes[0];setEst({km:Math.round(rt.distance/1000),min:Math.round(rt.duration/60),price:Math.round(rt.distance/1000*1.8)})}}catch(e){}})()}},[f.pickupLat,f.deliveryLat]);
+
+  const submit=async(pub)=>{setErr("");setLd(true);try{const body={pickupAddress:f.pickupAddress,pickupCity:f.pickupCity,pickupPostalCode:f.pickupPostalCode,pickupLat:f.pickupLat,pickupLon:f.pickupLon,pickupContact:f.pickupContact||undefined,pickupPhone:f.pickupPhone||undefined,pickupInstructions:f.pickupInstructions||undefined,pickupDateRequested:f.pickupDateRequested?new Date(f.pickupDateRequested).toISOString():undefined,deliveryAddress:f.deliveryAddress,deliveryCity:f.deliveryCity,deliveryPostalCode:f.deliveryPostalCode,deliveryLat:f.deliveryLat,deliveryLon:f.deliveryLon,deliveryContact:f.deliveryContact||undefined,deliveryPhone:f.deliveryPhone||undefined,deliveryInstructions:f.deliveryInstructions||undefined,deliveryDateRequested:f.deliveryDateRequested?new Date(f.deliveryDateRequested).toISOString():undefined,goodsDescription:f.goodsDescription,weightKg:f.weightKg?parseFloat(f.weightKg):undefined,volumeM3:f.volumeM3?parseFloat(f.volumeM3):undefined,palletCount:f.palletCount?parseInt(f.palletCount):undefined,vehicleTypeRequired:f.vehicleTypeRequired||undefined,budgetMaxCents:f.budgetMaxCents?Math.round(parseFloat(f.budgetMaxCents)*100):undefined,isFragile:f.isFragile,isStackable:f.isStackable,requiresTemp:f.requiresTemp,isADR:f.isADR,notes:f.notes||undefined};
+    const res=await api("/missions",{method:"POST",body:JSON.stringify(body)});
+    if(pub)await api(`/missions/${res.mission.id}/publish`,{method:"POST"});
+    setPage("missions")}catch(e){setErr(e.message)}setLd(false)};
+
+  return<div>
+    <Btn variant="ghost" size="sm" onClick={()=>setPage("missions")} style={{marginBottom:16}}>← Retour</Btn>
+    <h1 style={{fontSize:24,fontWeight:800,marginBottom:4}}>Nouvelle mission</h1>
+    <p style={{color:"#64748b",fontSize:14,marginBottom:24}}>Décrivez votre expédition — les transporteurs vérifiés vous feront des offres</p>
+
+    {est&&<div className="fade-up" style={{display:"flex",gap:20,padding:"16px 20px",background:"linear-gradient(135deg,rgba(249,115,22,.08),rgba(6,182,212,.06))",border:"1px solid rgba(249,115,22,.2)",borderRadius:14,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
+      <div><div style={{fontSize:11,color:"#64748b"}}>📏 Distance</div><div style={{fontSize:20,fontWeight:800,color:"#f97316"}}>{est.km} km</div></div>
+      <div><div style={{fontSize:11,color:"#64748b"}}>⏱️ Durée</div><div style={{fontSize:20,fontWeight:800,color:"#06b6d4"}}>{Math.floor(est.min/60)}h{String(est.min%60).padStart(2,"0")}</div></div>
+      <div><div style={{fontSize:11,color:"#64748b"}}>💶 Indicatif</div><div style={{fontSize:20,fontWeight:800,color:"#22c55e"}}>~{est.price}€</div></div>
+    </div>}
+
+    <TabBar tabs={[{key:"1",label:"📍 Itinéraire"},{key:"2",label:"📦 Marchandise"},{key:"3",label:"📋 Récap"}]} active={String(step)} onChange={k=>setStep(parseInt(k))}/>
+
+    {step===1&&<Card>
+      <h3 style={{fontSize:15,fontWeight:700,color:"#f97316",marginBottom:16}}>📍 Enlèvement</h3>
+      <AddrInput label="Adresse" value={f.pickupAddress} info={f.pickupCity?`${f.pickupPostalCode} ${f.pickupCity}`:null} required onSelect={a=>{u("pickupAddress",a.label);u("pickupCity",a.city);u("pickupPostalCode",a.postcode);u("pickupLat",a.lat);u("pickupLon",a.lon)}}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><Input label="Contact" value={f.pickupContact} onChange={e=>u("pickupContact",e.target.value)}/><Input label="Tél" value={f.pickupPhone} onChange={e=>u("pickupPhone",e.target.value)}/></div>
+      <Input label="Date souhaitée" type="datetime-local" value={f.pickupDateRequested} onChange={e=>u("pickupDateRequested",e.target.value)}/>
+      <TextArea label="Instructions" value={f.pickupInstructions} onChange={e=>u("pickupInstructions",e.target.value)} placeholder="Quai 3, appeler 30min avant..."/>
+      <h3 style={{fontSize:15,fontWeight:700,color:"#f97316",marginTop:24,marginBottom:16}}>📍 Livraison</h3>
+      <AddrInput label="Adresse" value={f.deliveryAddress} info={f.deliveryCity?`${f.deliveryPostalCode} ${f.deliveryCity}`:null} required onSelect={a=>{u("deliveryAddress",a.label);u("deliveryCity",a.city);u("deliveryPostalCode",a.postcode);u("deliveryLat",a.lat);u("deliveryLon",a.lon)}}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><Input label="Contact" value={f.deliveryContact} onChange={e=>u("deliveryContact",e.target.value)}/><Input label="Tél" value={f.deliveryPhone} onChange={e=>u("deliveryPhone",e.target.value)}/></div>
+      <Input label="Date souhaitée" type="datetime-local" value={f.deliveryDateRequested} onChange={e=>u("deliveryDateRequested",e.target.value)}/>
+      <TextArea label="Instructions" value={f.deliveryInstructions} onChange={e=>u("deliveryInstructions",e.target.value)} placeholder="Hayon obligatoire..."/>
+      <Btn onClick={()=>setStep(2)} size="lg" style={{width:"100%",marginTop:8}} disabled={!f.pickupCity||!f.deliveryCity}>Suivant →</Btn>
+    </Card>}
+
+    {step===2&&<Card>
+      <h3 style={{fontSize:15,fontWeight:700,color:"#f97316",marginBottom:16}}>📦 Marchandise</h3>
+      <Input label="Description" required value={f.goodsDescription} onChange={e=>u("goodsDescription",e.target.value)} placeholder="8 palettes de cartons..."/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}><Input label="Poids (kg)" type="number" value={f.weightKg} onChange={e=>u("weightKg",e.target.value)}/><Input label="Volume (m³)" type="number" value={f.volumeM3} onChange={e=>u("volumeM3",e.target.value)}/><Input label="Palettes" type="number" value={f.palletCount} onChange={e=>u("palletCount",e.target.value)}/></div>
+      <Select label="Véhicule requis" value={f.vehicleTypeRequired} onChange={e=>u("vehicleTypeRequired",e.target.value)} options={[{value:"",label:"— Tout véhicule —"},...Object.entries(VT).map(([v,l])=>({value:v,label:l}))]}/>
+      <Input label="Budget max (€ HT)" type="number" value={f.budgetMaxCents} onChange={e=>u("budgetMaxCents",e.target.value)} placeholder="Optionnel"/>
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",margin:"12px 0"}}>
+        {[["isFragile","🔴 Fragile"],["isADR","☢️ ADR"],["requiresTemp","❄️ Temp. contrôlée"]].map(([k,l])=><label key={k} style={{display:"flex",alignItems:"center",gap:8,fontSize:13,cursor:"pointer"}}><input type="checkbox" checked={f[k]} onChange={e=>u(k,e.target.checked)}/>{l}</label>)}
+        <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,cursor:"pointer"}}><input type="checkbox" checked={f.isStackable} onChange={e=>u("isStackable",e.target.checked)}/>📐 Gerbable</label>
+      </div>
+      <TextArea label="Notes" value={f.notes} onChange={e=>u("notes",e.target.value)} placeholder="Infos complémentaires..."/>
+      <div style={{display:"flex",gap:12,marginTop:12}}><Btn variant="secondary" onClick={()=>setStep(1)} size="lg" style={{flex:1}}>← Retour</Btn><Btn onClick={()=>setStep(3)} size="lg" style={{flex:2}} disabled={!f.goodsDescription}>Suivant →</Btn></div>
+    </Card>}
+
+    {step===3&&<Card>
+      <h3 style={{fontSize:15,fontWeight:700,color:"#f97316",marginBottom:16}}>📋 Récapitulatif</h3>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+        <div><div style={{fontSize:12,color:"#64748b",fontWeight:600,marginBottom:6}}>ENLÈVEMENT</div><div style={{fontWeight:700}}>{f.pickupCity}</div><div style={{fontSize:12,color:"#94a3b8"}}>{f.pickupAddress}</div>{f.pickupDateRequested&&<div style={{fontSize:12,color:"#06b6d4",marginTop:4}}>📅 {new Date(f.pickupDateRequested).toLocaleString("fr-FR")}</div>}</div>
+        <div><div style={{fontSize:12,color:"#64748b",fontWeight:600,marginBottom:6}}>LIVRAISON</div><div style={{fontWeight:700}}>{f.deliveryCity}</div><div style={{fontSize:12,color:"#94a3b8"}}>{f.deliveryAddress}</div>{f.deliveryDateRequested&&<div style={{fontSize:12,color:"#06b6d4",marginTop:4}}>📅 {new Date(f.deliveryDateRequested).toLocaleString("fr-FR")}</div>}</div>
+      </div>
+      <div style={{margin:"16px 0",padding:"12px 16px",background:"rgba(255,255,255,.03)",borderRadius:10}}>
+        <div style={{fontWeight:700}}>{f.goodsDescription}</div>
+        <div style={{fontSize:12,color:"#94a3b8",marginTop:4}}>{[f.weightKg&&`${f.weightKg}kg`,f.volumeM3&&`${f.volumeM3}m³`,f.palletCount&&`${f.palletCount} pal.`,VT[f.vehicleTypeRequired]].filter(Boolean).join(" • ")||"—"}</div>
+      </div>
+      {est&&<div style={{padding:"10px 14px",background:"rgba(249,115,22,.06)",borderRadius:8,marginBottom:16,fontSize:13}}>📏 {est.km} km • ⏱️ ~{Math.floor(est.min/60)}h{String(est.min%60).padStart(2,"0")} • 💶 ~{est.price}€</div>}
+      <Err msg={err}/>
+      <div style={{display:"flex",gap:12}}><Btn variant="secondary" onClick={()=>setStep(2)} size="lg" style={{flex:1}}>← Modifier</Btn><Btn variant="secondary" onClick={()=>submit(false)} disabled={ld} size="lg" style={{flex:1}}>Brouillon</Btn><Btn onClick={()=>submit(true)} disabled={ld} size="lg" style={{flex:2}}>{ld?"Envoi...":"📢 Publier"}</Btn></div>
+    </Card>}
+  </div>;
+};
+
+// ═══ FREIGHT EXCHANGE (Bourse de fret) — ENHANCED WITH FILTERS ═══
+const FreightExchange=({api,user,setPage,setMid})=>{
+  const[ms,setMs]=useState([]);const[ld,setLd]=useState(true);
+  const[bidId,setBidId]=useState(null);const[bidAmt,setBidAmt]=useState("");const[bidMsg,setBidMsg]=useState("");const[bidLd,setBidLd]=useState(false);const[bidErr,setBidErr]=useState("");const[bidOk,setBidOk]=useState("");
+  const[fCity,setFCity]=useState("");const[fVeh,setFVeh]=useState("");const[fMaxPrice,setFMaxPrice]=useState("");const[fSort,setFSort]=useState("date");
+  const load=()=>{setLd(true);api("/missions?status=PUBLISHED&limit=100").then(d=>setMs(d.missions||[])).catch(console.error).finally(()=>setLd(false))};
+  useEffect(()=>{load()},[api]);
+
+  const filtered=ms.filter(m=>{
+    if(fCity){const c=fCity.toLowerCase();if(!(m.pickupCity||"").toLowerCase().includes(c)&&!(m.deliveryCity||"").toLowerCase().includes(c))return false}
+    if(fVeh&&m.vehicleTypeRequired!==fVeh)return false;
+    if(fMaxPrice){const mx=parseFloat(fMaxPrice)*100;if(m.budgetMaxCents&&m.budgetMaxCents>mx)return false}
+    return true;
+  }).sort((a,b)=>{
+    if(fSort==="price")return(a.budgetMaxCents||0)-(b.budgetMaxCents||0);
+    if(fSort==="price-desc")return(b.budgetMaxCents||0)-(a.budgetMaxCents||0);
+    if(fSort==="km")return(a.distanceKm||999)-(b.distanceKm||999);
+    return new Date(b.createdAt)-new Date(a.createdAt);
+  });
+
+  const doBid=async(mid)=>{const c=Math.round(parseFloat(bidAmt)*100);if(!c||c<100){setBidErr("Minimum 1€");return}setBidLd(true);setBidErr("");setBidOk("");try{await api("/bids",{method:"POST",body:JSON.stringify({missionId:mid,priceCents:c,message:bidMsg||undefined})});setBidOk("Offre envoyée !");setTimeout(()=>{setBidId(null);setBidOk("")},1500)}catch(e){setBidErr(e.message)}setBidLd(false)};
+
+  if(ld)return <Spinner/>;
+  return <div>
+    <div style={{marginBottom:24}}><h1 style={{fontSize:24,fontWeight:800}}>📦 Bourse de fret</h1><p style={{color:"#64748b",fontSize:14,marginTop:4}}>{filtered.length} mission{filtered.length>1?"s":""} disponible{filtered.length>1?"s":""}</p></div>
+
+    <Card style={{marginBottom:20,padding:16}}>
+      <div style={{fontSize:12,fontWeight:600,color:"#f97316",marginBottom:10,textTransform:"uppercase",letterSpacing:".05em"}}>🔍 Filtres</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:12}}>
+        <div><label style={{fontSize:11,color:"#64748b",display:"block",marginBottom:4}}>Ville (départ/arrivée)</label><input value={fCity} onChange={e=>setFCity(e.target.value)} placeholder="Paris, Lyon..." style={{width:"100%",padding:"8px 12px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,color:"#e2e8f0",fontSize:13,outline:"none"}}/></div>
+        <div><label style={{fontSize:11,color:"#64748b",display:"block",marginBottom:4}}>Type véhicule</label><select value={fVeh} onChange={e=>setFVeh(e.target.value)} style={{width:"100%",padding:"8px 12px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,color:"#e2e8f0",fontSize:13}}><option value="" style={{background:"#1a1a2e"}}>Tous</option>{Object.entries(VT).map(([k,v])=><option key={k} value={k} style={{background:"#1a1a2e"}}>{v}</option>)}</select></div>
+        <div><label style={{fontSize:11,color:"#64748b",display:"block",marginBottom:4}}>Budget max (€)</label><input type="number" value={fMaxPrice} onChange={e=>setFMaxPrice(e.target.value)} placeholder="Ex: 2000" style={{width:"100%",padding:"8px 12px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,color:"#e2e8f0",fontSize:13,outline:"none"}}/></div>
+        <div><label style={{fontSize:11,color:"#64748b",display:"block",marginBottom:4}}>Trier par</label><select value={fSort} onChange={e=>setFSort(e.target.value)} style={{width:"100%",padding:"8px 12px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,color:"#e2e8f0",fontSize:13}}><option value="date" style={{background:"#1a1a2e"}}>Plus récent</option><option value="price" style={{background:"#1a1a2e"}}>Prix croissant</option><option value="price-desc" style={{background:"#1a1a2e"}}>Prix décroissant</option><option value="km" style={{background:"#1a1a2e"}}>Distance</option></select></div>
+      </div>
+      {(fCity||fVeh||fMaxPrice)&&<div style={{marginTop:8}}><button onClick={()=>{setFCity("");setFVeh("");setFMaxPrice("")}} style={{background:"none",border:"none",color:"#f97316",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>✕ Réinitialiser les filtres</button></div>}
+    </Card>
+
+    {filtered.length===0?<Empty icon="🚛" title="Aucune mission trouvée" desc={ms.length>0?"Modifiez vos filtres pour voir plus de résultats":"Les nouvelles missions des chargeurs apparaîtront ici. Revenez bientôt !"}/>:
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>{filtered.map(m=><Card key={m.id} style={{padding:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12}}>
+        <div style={{flex:1,minWidth:250,cursor:"pointer"}} onClick={()=>{setMid(m.id);setPage("mission-detail")}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <Badge status={m.status}/><span style={{fontSize:11,color:"#64748b",fontFamily:"monospace"}}>{m.reference}</span>
+            {(m._count?.bids||0)>0&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"rgba(249,115,22,.15)",color:"#f97316",fontWeight:700}}>{m._count.bids} offre{m._count.bids>1?"s":""}</span>}
+            <span style={{fontSize:11,color:"#475569"}}>{timeAgo(m.createdAt)}</span>
+          </div>
+          <div style={{fontSize:18,fontWeight:800,marginBottom:4}}>{m.pickupCity} → {m.deliveryCity}</div>
+          <div style={{fontSize:13,color:"#94a3b8"}}>{m.goodsDescription||"Marchandise"}{m.weightKg?` • ${(m.weightKg/1000).toFixed(1)}t`:""}{m.palletCount?` • ${m.palletCount} pal.`:""}{m.vehicleTypeRequired?` • ${VT[m.vehicleTypeRequired]||m.vehicleTypeRequired}`:""}</div>
+          <div style={{display:"flex",gap:16,marginTop:6,fontSize:12,color:"#64748b"}}>{m.pickupDateRequested&&<span>📅 {fmtDate(m.pickupDateRequested)}</span>}{m.distanceKm&&<span>📍 {m.distanceKm} km</span>}</div>
+        </div>
+        <div style={{textAlign:"right",minWidth:150}}>
+          <div style={{fontSize:24,fontWeight:900,color:"#fbbf24"}}>{fmt(m.budgetMaxCents)}</div>
+          <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Budget max</div>
+          {m.distanceKm&&m.budgetMaxCents&&<div style={{fontSize:12,color:"#94a3b8",marginTop:4}}>{((m.budgetMaxCents/100)/m.distanceKm).toFixed(2)} €/km</div>}
+          <div style={{marginTop:12}}>
+            {bidId===m.id?<div style={{textAlign:"left"}}>
+              <input type="number" value={bidAmt} onChange={e=>setBidAmt(e.target.value)} placeholder="Votre prix (€)" style={{width:"100%",padding:"8px 12px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,color:"#e2e8f0",fontSize:14,outline:"none",marginBottom:6}}/>
+              <input type="text" value={bidMsg} onChange={e=>setBidMsg(e.target.value)} placeholder="Message (optionnel)" style={{width:"100%",padding:"8px 12px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,color:"#e2e8f0",fontSize:13,outline:"none",marginBottom:6}}/>
+              {bidErr&&<div style={{fontSize:12,color:"#f87171",marginBottom:4}}>{bidErr}</div>}
+              {bidOk&&<div style={{fontSize:12,color:"#22c55e",marginBottom:4}}>✅ {bidOk}</div>}
+              <div style={{display:"flex",gap:6}}><Btn variant="success" size="sm" disabled={bidLd} onClick={()=>doBid(m.id)}>{bidLd?"...":"Envoyer"}</Btn><Btn variant="ghost" size="sm" onClick={()=>{setBidId(null);setBidErr("");setBidOk("")}}>Annuler</Btn></div>
+            </div>:<Btn size="sm" onClick={()=>{setBidId(m.id);setBidAmt("");setBidMsg("");setBidErr("");setBidOk("")}}>💰 Faire une offre</Btn>}
+          </div>
+        </div>
+      </div>
+    </Card>)}</div>}
+  </div>;
+};
+
+// ═══ SHARED ROUTES (Partage de courses) ═══
+const SharedRoutes=({api,user,setPage})=>{
+  const[routes,setRoutes]=useState([]);const[mine,setMine]=useState([]);const[ld,setLd]=useState(true);
+  const[tab,setTab]=useState("browse");const[showAdd,setShowAdd]=useState(false);
+  const[form,setForm]=useState({departureAddress:"",departureCity:"",departurePostalCode:"",departureLat:null,departureLon:null,arrivalAddress:"",arrivalCity:"",arrivalPostalCode:"",arrivalLat:null,arrivalLon:null,departureDate:"",vehicleType:"",availableWeightKg:"",availablePallets:"",availableVolumeM3:"",notes:""});
+  const[saving,setSaving]=useState(false);const[err,setErr]=useState("");const[ok,setOk]=useState("");
+  const[fCity,setFCity]=useState("");const[fVeh,setFVeh]=useState("");
+  const u=(k,v)=>setForm(f=>({...f,[k]:v}));
+
+  const load=async()=>{setLd(true);try{const[pub,my]=await Promise.all([api("/shared-routes"),api("/shared-routes/mine")]);setRoutes(pub.routes||[]);setMine(my.routes||[])}catch(e){}setLd(false)};
+  useEffect(()=>{load()},[api]);
+
+  const submit=async()=>{setErr("");if(!form.departureCity||!form.arrivalCity||!form.departureDate)return setErr("Ville départ, arrivée et date obligatoires");setSaving(true);try{await api("/shared-routes",{method:"POST",body:JSON.stringify({...form,availableWeightKg:form.availableWeightKg?parseFloat(form.availableWeightKg):null,availablePallets:form.availablePallets?parseInt(form.availablePallets):null,availableVolumeM3:form.availableVolumeM3?parseFloat(form.availableVolumeM3):null})});setOk("Trajet publié !");setShowAdd(false);setForm({departureAddress:"",departureCity:"",departurePostalCode:"",departureLat:null,departureLon:null,arrivalAddress:"",arrivalCity:"",arrivalPostalCode:"",arrivalLat:null,arrivalLon:null,departureDate:"",vehicleType:"",availableWeightKg:"",availablePallets:"",availableVolumeM3:"",notes:""});load();setTimeout(()=>setOk(""),3000)}catch(e){setErr(e.message)}setSaving(false)};
+
+  const del=async(id)=>{if(!confirm("Supprimer ce trajet ?"))return;try{await api(`/shared-routes/${id}`,{method:"DELETE"});load()}catch(e){alert(e.message)}};
+  const cancel=async(id)=>{try{await api(`/shared-routes/${id}`,{method:"PUT",body:JSON.stringify({status:"CANCELLED"})});load()}catch(e){alert(e.message)}};
+
+  const filtered=routes.filter(r=>{
+    if(fCity){const c=fCity.toLowerCase();if(!r.departureCity.toLowerCase().includes(c)&&!r.arrivalCity.toLowerCase().includes(c))return false}
+    if(fVeh&&r.vehicleType!==fVeh)return false;
     return true;
   });
 
-  return (
-    <div>
-      <h1 style={{ fontSize:24, fontWeight:800, marginBottom:8 }}>Utilisateurs ({d.pagination?.total||d.users?.length})</h1>
-      {msg && <SuccessMsg msg={msg} />}
-      <div style={{ display:"flex", gap:8, marginTop:12, marginBottom:16, flexWrap:"wrap" }}>
-        {[{k:"all",l:"Tous"},{k:"pending",l:"⏳ En attente"},{k:"transporteur",l:"🚛 Transporteurs"},{k:"chargeur",l:"📦 Chargeurs"},{k:"admin",l:"🔴 Admins"}].map(f => (
-          <span key={f.k} onClick={() => setFilter(f.k)} style={{ padding:"6px 14px", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer", background:filter===f.k?"rgba(249,115,22,0.15)":"rgba(255,255,255,0.04)", color:filter===f.k?"#f97316":"#94a3b8", border:`1px solid ${filter===f.k?"rgba(249,115,22,0.3)":"rgba(255,255,255,0.08)"}` }}>{f.l}</span>
-        ))}
-      </div>
-      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-        {filteredUsers.map(u => {
-          const isPending = u.status === "PENDING_VERIFICATION";
-          const isActive = u.status === "ACTIVE";
-          const isSelf = u.role === "SUPER_ADMIN";
-          return (
-            <Card key={u.id} style={{ padding:16 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12 }}>
-                <div style={{ flex:1, minWidth:200 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
-                    <span style={{ fontSize:16 }}>{roleIcons[u.role]||"\u26aa"}</span>
-                    <span style={{ fontSize:15, fontWeight:700 }}>{u.firstName} {u.lastName}</span>
-                    <Badge status={u.status} />
-                  </div>
-                  <div style={{ fontSize:12, color:"#94a3b8", fontFamily:"monospace" }}>{u.email}</div>
-                  <div style={{ fontSize:12, color:"#64748b", marginTop:2 }}>{roleLabels[u.role]} {u.company ? `\u2014 ${u.company.name}` : ""}</div>
-                </div>
-                {!isSelf && (
-                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                    {isPending && <Btn variant="success" size="sm" disabled={actionLoading===u.id+"verify"} onClick={() => doAction(u.id, "verify", "V\u00e9rifi\u00e9")}>{actionLoading===u.id+"verify" ? "..." : "\u2705 Accepter"}</Btn>}
-                    {isPending && <Btn variant="danger" size="sm" disabled={actionLoading===u.id+"reject"} onClick={() => doAction(u.id, "reject", "Refus\u00e9")}>{actionLoading===u.id+"reject" ? "..." : "\u274c Refuser"}</Btn>}
-                    {isActive && <Btn variant="danger" size="sm" disabled={actionLoading===u.id+"suspend"} onClick={() => doAction(u.id, "suspend", "Suspendu")}>{actionLoading===u.id+"suspend" ? "..." : "\u23f8 Suspendre"}</Btn>}
-                    <Btn variant="secondary" size="sm" disabled={actionLoading===u.id+"delete"} onClick={() => doAction(u.id, "delete", "Supprim\u00e9")} style={{ color:"#f87171" }}>{actionLoading===u.id+"delete" ? "..." : "\ud83d\uddd1 Supprimer"}</Btn>
-                  </div>
-                )}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+  if(ld)return <Spinner/>;
+  return <div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexWrap:"wrap",gap:12}}>
+      <div><h1 style={{fontSize:24,fontWeight:800}}>🔄 Partage de courses</h1><p style={{color:"#64748b",fontSize:14,marginTop:4}}>Publiez vos trajets retour à vide — Trouvez du fret pour vos retours</p></div>
+      {user.role==="TRANSPORTEUR"&&<Btn onClick={()=>setShowAdd(!showAdd)}>{showAdd?"Annuler":"➕ Publier un trajet"}</Btn>}
     </div>
-  );
-};
 
-const AdminCompaniesPage = ({ api }) => {
-  const [c, sC] = useState([]);
-  const [l, sL] = useState(true);
-  const [actionLoading, setActionLoading] = useState(null);
-  const [msg, setMsg] = useState("");
+    <Ok msg={ok}/>
 
-  const loadCompanies = () => { sL(true); api("/admin/companies").then(d => sC(Array.isArray(d)?d:[])).catch(console.error).finally(() => sL(false)); };
-  useEffect(() => { loadCompanies(); }, [api]);
-
-  const verifyCompany = async (id) => {
-    setActionLoading(id); setMsg("");
-    try {
-      const r = await api(`/admin/companies/${id}/verify`, { method:"POST" });
-      setMsg(r.message || "Entreprise vérifiée");
-      loadCompanies();
-    } catch (e) { setMsg(`Erreur: ${e.message}`); }
-    setActionLoading(null);
-  };
-
-  if (l) return <Spinner />;
-  const tc = { PLATEFORME:"#a78bfa", TRANSPORTEUR:"#60a5fa", CHARGEUR:"#34d399" };
-
-  return (
-    <div>
-      <h1 style={{ fontSize:24, fontWeight:800, marginBottom:8 }}>Entreprises ({c.length})</h1>
-      {msg && <SuccessMsg msg={msg} />}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(340px, 1fr))", gap:14, marginTop:16 }}>
-        {c.map(co => (
-          <Card key={co.id}>
-            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
-              <div style={{ fontSize:16, fontWeight:700 }}>{co.name}</div>
-              <span style={{ fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:6, background:`${tc[co.type]||"#94a3b8"}20`, color:tc[co.type]||"#94a3b8", textTransform:"uppercase" }}>{co.type}</span>
-            </div>
-            <div style={{ fontSize:12, color:"#94a3b8" }}>
-              <div>{co.address}, {co.postalCode} {co.city}</div>
-              <div>SIREN: {co.siren} {co.siret ? `| SIRET: ${co.siret}` : ""}</div>
-            </div>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:10 }}>
-              <div style={{ display:"flex", gap:10, fontSize:11, color:"#64748b" }}>
-                <span>{co._count?.users||0} users</span>
-                <span>{co._count?.vehicles||0} véhicules</span>
-              </div>
-              {co.isVerified
-                ? <span style={{ fontSize:12, color:"#22c55e", fontWeight:600 }}>✅ Vérifiée</span>
-                : <Btn variant="success" size="sm" disabled={actionLoading===co.id} onClick={() => verifyCompany(co.id)}>{actionLoading===co.id ? "..." : "✅ Vérifier"}</Btn>
-              }
-            </div>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// ═══ ADMIN AGENTS PAGE ═══
-const AdminAgentsPage = ({ api }) => {
-  const [agents, setAgents] = useState(null);
-  const [l, sL] = useState(true);
-  useEffect(() => { api("/agents/status").then(setAgents).catch(console.error).finally(() => sL(false)); }, [api]);
-  if (l) return <Spinner />;
-  if (!agents) return <Card><div style={{ textAlign:"center", color:"#64748b", padding:20 }}>Erreur de chargement</div></Card>;
-
-  return (
-    <div>
-      <h1 style={{ fontSize:24, fontWeight:800, marginBottom:8 }}>🤖 Agents IA</h1>
-      <p style={{ color:"#64748b", fontSize:13, marginBottom:24 }}>Statut des agents autonomes connectés à la plateforme</p>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(300px, 1fr))", gap:14 }}>
-        {agents.agents?.map(a => (
-          <Card key={a.name}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-              <div style={{ fontSize:18, fontWeight:800, color:"#e2e8f0" }}>
-                {a.name === "PRICING" ? "💰" : a.name === "MATCHER" ? "🤖" : "🛡️"} {a.name}
-              </div>
-              <span style={{ padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, background:a.status==="active"?"rgba(34,197,94,0.15)":"rgba(148,163,184,0.15)", color:a.status==="active"?"#22c55e":"#94a3b8" }}>
-                {a.status === "active" ? "✅ Actif" : "⏸ En attente"}
-              </span>
-            </div>
-            <div style={{ fontSize:12, color:"#94a3b8" }}>
-              {a.name === "PRICING" && `Devis générés: ${a.stats?.quotesGenerated || 0} | Prix moyen: ${Math.round(a.stats?.averagePrice || 0)}€`}
-              {a.name === "MATCHER" && `Matchs: ${a.stats?.matchesCreated || 0} | Acceptés: ${a.stats?.matchesAccepted || 0} | Rejetés: ${a.stats?.matchesRejected || 0}`}
-              {a.name === "RISK" && `Évaluations: ${a.stats?.assessments || 0} | Fraudes: ${a.stats?.fraudsDetected || 0} | Alertes: ${a.stats?.alertsGenerated || 0}`}
-            </div>
-          </Card>
-        ))}
-      </div>
-      <Card style={{ marginTop:20 }}>
-        <div style={{ fontSize:12, color:"#64748b" }}>
-          <strong>Endpoints disponibles :</strong><br/>
-          POST /api/agents/pricing/:missionId — Estimer un prix<br/>
-          POST /api/agents/match/:missionId — Trouver transporteurs<br/>
-          POST /api/agents/risk/:companyId — Évaluer risque entreprise
+    {showAdd&&<Card style={{marginBottom:20,padding:24}}>
+      <h3 style={{fontSize:15,fontWeight:700,color:"#f97316",marginBottom:16}}>📍 Nouveau trajet partagé</h3>
+      <p style={{fontSize:13,color:"#94a3b8",marginBottom:16}}>Publiez votre trajet retour à vide pour que les chargeurs puissent vous confier du fret. Réduisez vos retours à vide et augmentez votre rentabilité !</p>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+        <div>
+          <div style={{fontSize:12,fontWeight:700,color:"#06b6d4",marginBottom:12,textTransform:"uppercase"}}>🟢 Départ</div>
+          <AddrInput label="Adresse départ" value={form.departureAddress} info={form.departureCity?{city:form.departureCity,postcode:form.departurePostalCode}:null} onSelect={a=>{u("departureAddress",a.street);u("departureCity",a.city);u("departurePostalCode",a.postcode);u("departureLat",a.lat);u("departureLon",a.lon)}} required/>
         </div>
-      </Card>
+        <div>
+          <div style={{fontSize:12,fontWeight:700,color:"#f97316",marginBottom:12,textTransform:"uppercase"}}>🔴 Arrivée</div>
+          <AddrInput label="Adresse arrivée" value={form.arrivalAddress} info={form.arrivalCity?{city:form.arrivalCity,postcode:form.arrivalPostalCode}:null} onSelect={a=>{u("arrivalAddress",a.street);u("arrivalCity",a.city);u("arrivalPostalCode",a.postcode);u("arrivalLat",a.lat);u("arrivalLon",a.lon)}} required/>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+        <Input label="Date départ" type="datetime-local" required value={form.departureDate} onChange={e=>u("departureDate",e.target.value)}/>
+        <Select label="Type véhicule" value={form.vehicleType} onChange={e=>u("vehicleType",e.target.value)} options={[{value:"",label:"— Sélectionner —"},...Object.entries(VT).map(([k,v])=>({value:k,label:v}))]}/>
+        <Input label="Poids dispo (kg)" type="number" value={form.availableWeightKg} onChange={e=>u("availableWeightKg",e.target.value)} placeholder="Ex: 15000"/>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Input label="Palettes dispo" type="number" value={form.availablePallets} onChange={e=>u("availablePallets",e.target.value)} placeholder="Ex: 20"/>
+        <Input label="Volume dispo (m³)" type="number" value={form.availableVolumeM3} onChange={e=>u("availableVolumeM3",e.target.value)} placeholder="Ex: 60"/>
+      </div>
+      <TextArea label="Notes" value={form.notes} onChange={e=>u("notes",e.target.value)} placeholder="Horaires flexibles, type de marchandise accepté..."/>
+      <Err msg={err}/>
+      <Btn onClick={submit} disabled={saving} size="lg" style={{width:"100%"}}>{saving?"Publication...":"🚛 Publier ce trajet"}</Btn>
+    </Card>}
+
+    <TabBar tabs={[{key:"browse",icon:"🌍",label:`Tous les trajets (${filtered.length})`},{key:"mine",icon:"📋",label:`Mes trajets (${mine.length})`}]} active={tab} onChange={setTab}/>
+
+    {tab==="browse"&&<div>
+      <div style={{display:"flex",gap:12,marginBottom:16,flexWrap:"wrap"}}>
+        <input value={fCity} onChange={e=>setFCity(e.target.value)} placeholder="🔍 Filtrer par ville..." style={{flex:1,minWidth:200,padding:"8px 12px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,color:"#e2e8f0",fontSize:13,outline:"none"}}/>
+        <select value={fVeh} onChange={e=>setFVeh(e.target.value)} style={{padding:"8px 12px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,color:"#e2e8f0",fontSize:13}}><option value="" style={{background:"#1a1a2e"}}>Tous véhicules</option>{Object.entries(VT).map(([k,v])=><option key={k} value={k} style={{background:"#1a1a2e"}}>{v}</option>)}</select>
+      </div>
+      {filtered.length===0?<Empty icon="🔄" title="Aucun trajet partagé" desc="Les transporteurs publieront ici leurs trajets avec de la capacité disponible."/>:
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>{filtered.map(r=><Card key={r.id}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12}}>
+          <div style={{flex:1}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+              <Badge status={r.status}/>{r.vehicleType&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"rgba(6,182,212,.1)",color:"#06b6d4",fontWeight:600}}>{VT[r.vehicleType]||r.vehicleType}</span>}
+              <span style={{fontSize:11,color:"#475569"}}>{timeAgo(r.createdAt)}</span>
+            </div>
+            <div style={{fontSize:18,fontWeight:800,marginBottom:4}}>{r.departureCity} → {r.arrivalCity}</div>
+            <div style={{fontSize:13,color:"#94a3b8"}}>{[r.availableWeightKg&&`${(r.availableWeightKg/1000).toFixed(1)}t dispo`,r.availablePallets&&`${r.availablePallets} pal.`,r.availableVolumeM3&&`${r.availableVolumeM3}m³`].filter(Boolean).join(" • ")||"Capacité non précisée"}</div>
+            {r.notes&&<div style={{fontSize:12,color:"#64748b",marginTop:4,fontStyle:"italic"}}>💬 {r.notes}</div>}
+            <div style={{fontSize:12,color:"#06b6d4",marginTop:6}}>📅 Départ : {new Date(r.departureDate).toLocaleString("fr-FR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            {r.user&&<div><div style={{fontSize:13,fontWeight:600}}>{r.user.firstName} {r.user.lastName?.[0]}.</div>{r.user.company&&<div style={{fontSize:11,color:"#94a3b8"}}>{r.user.company.name}{r.user.company.isVerified?" ✅":""}</div>}</div>}
+            {user.role==="CHARGEUR"&&<div style={{marginTop:10}}><Btn size="sm" onClick={()=>{setPage("new-mission")}}>📦 Proposer du fret</Btn></div>}
+          </div>
+        </div>
+      </Card>)}</div>}
+    </div>}
+
+    {tab==="mine"&&<div>
+      {mine.length===0?<Empty icon="🔄" title="Aucun trajet publié" desc="Publiez vos trajets retour pour trouver du fret et éviter de rouler à vide !" action="Publier un trajet" onAction={()=>setShowAdd(true)}/>:
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>{mine.map(r=><Card key={r.id}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><Badge status={r.status}/>{r.vehicleType&&<span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:"rgba(6,182,212,.1)",color:"#06b6d4"}}>{VT[r.vehicleType]||r.vehicleType}</span>}</div>
+            <div style={{fontSize:16,fontWeight:800}}>{r.departureCity} → {r.arrivalCity}</div>
+            <div style={{fontSize:12,color:"#06b6d4",marginTop:4}}>📅 {new Date(r.departureDate).toLocaleString("fr-FR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
+            <div style={{fontSize:12,color:"#94a3b8",marginTop:2}}>{[r.availableWeightKg&&`${(r.availableWeightKg/1000).toFixed(1)}t`,r.availablePallets&&`${r.availablePallets} pal.`,r.availableVolumeM3&&`${r.availableVolumeM3}m³`].filter(Boolean).join(" • ")||""}</div>
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            {r.status==="ACTIVE"&&<Btn variant="secondary" size="sm" onClick={()=>cancel(r.id)}>⏸ Annuler</Btn>}
+            <Btn variant="danger" size="sm" onClick={()=>del(r.id)}>🗑</Btn>
+          </div>
+        </div>
+      </Card>)}</div>}
+    </div>}
+  </div>;
+};
+
+// ═══ MY BIDS ═══
+const MyBids=({api,setPage,setMid})=>{
+  const[bids,setBids]=useState([]);const[ld,setLd]=useState(true);
+  const load=()=>{setLd(true);api("/bids/mine").then(d=>setBids(Array.isArray(d)?d:d.bids||[])).catch(console.error).finally(()=>setLd(false))};
+  useEffect(()=>{load()},[api]);
+  const withdraw=async id=>{if(!confirm("Retirer cette offre ?"))return;try{await api(`/bids/${id}`,{method:"DELETE"});load()}catch(e){alert(e.message)}};
+  if(ld)return <Spinner/>;
+  const pend=bids.filter(b=>b.status==="PENDING"),acc=bids.filter(b=>b.status==="ACCEPTED"),rej=bids.filter(b=>["REJECTED","WITHDRAWN","EXPIRED"].includes(b.status));
+  return <div>
+    <h1 style={{fontSize:24,fontWeight:800,marginBottom:8}}>💰 Mes offres ({bids.length})</h1>
+    <p style={{color:"#64748b",fontSize:13,marginBottom:20}}>{pend.length} en attente · {acc.length} acceptée{acc.length>1?"s":""} · {rej.length} terminée{rej.length>1?"s":""}</p>
+    {bids.length===0?<Empty icon="💰" title="Aucune offre" desc="Consultez la Bourse de fret pour proposer vos services sur les missions disponibles." action="Bourse de fret" onAction={()=>setPage("freight-exchange")}/>:
+    bids.map(b=><Card key={b.id} style={{marginBottom:8,borderLeft:`3px solid ${b.status==="ACCEPTED"?"#22c55e":b.status==="PENDING"?"#f59e0b":"#64748b"}`}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{cursor:"pointer"}} onClick={()=>{if(b.mission?.id||b.missionId){setMid(b.mission?.id||b.missionId);setPage("mission-detail")}}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><Badge status={b.status}/>{b.mission&&<span style={{fontSize:14,fontWeight:600}}>{b.mission.pickupCity} → {b.mission.deliveryCity}</span>}</div>
+          {b.message&&<div style={{fontSize:12,color:"#94a3b8",marginTop:4}}>💬 "{b.message}"</div>}
+          <div style={{fontSize:11,color:"#64748b",marginTop:4}}>{fmtDT(b.createdAt)}</div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{fontSize:22,fontWeight:800,color:b.status==="ACCEPTED"?"#22c55e":"#e2e8f0"}}>{fmt(b.priceCents)}</div>
+          {b.status==="PENDING"&&<Btn variant="danger" size="sm" onClick={()=>withdraw(b.id)}>Retirer</Btn>}
+        </div>
+      </div>
+    </Card>)}
+  </div>;
+};
+
+// ═══ VEHICLES ═══
+const VehiclesPage=({api})=>{
+  const[v,sV]=useState([]);const[ld,setLd]=useState(true);const[showAdd,setShowAdd]=useState(false);
+  const[form,setForm]=useState({type:"SEMI_TAUTLINER",brand:"",model:"",licensePlate:"",capacityKg:"",volumeM3:"",palletSpots:""});
+  const[saving,setSaving]=useState(false);const[err,setErr]=useState("");
+  const load=()=>{setLd(true);api("/vehicles").then(d=>sV(Array.isArray(d)?d:d.vehicles||[])).catch(console.error).finally(()=>setLd(false))};
+  useEffect(()=>{load()},[api]);
+  const submit=async()=>{setSaving(true);setErr("");try{await api("/vehicles",{method:"POST",body:JSON.stringify({...form,capacityKg:Number(form.capacityKg)||0,volumeM3:Number(form.volumeM3)||0,palletSpots:Number(form.palletSpots)||0})});setShowAdd(false);setForm({type:"SEMI_TAUTLINER",brand:"",model:"",licensePlate:"",capacityKg:"",volumeM3:"",palletSpots:""});load()}catch(e){setErr(e.message)}setSaving(false)};
+  const del=async id=>{if(!confirm("Supprimer ce véhicule ?"))return;try{await api(`/vehicles/${id}`,{method:"DELETE"});load()}catch(e){alert(e.message)}};
+  if(ld)return <Spinner/>;
+  return <div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+      <h1 style={{fontSize:24,fontWeight:800}}>🚚 Véhicules ({v.length})</h1>
+      <Btn onClick={()=>setShowAdd(!showAdd)}>{showAdd?"Annuler":"+ Ajouter"}</Btn>
     </div>
-  );
+    {showAdd&&<Card style={{marginBottom:20,padding:24}}>
+      <h3 style={{color:"#f97316",fontSize:14,fontWeight:700,marginBottom:16}}>Nouveau véhicule</h3>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Select label="Type" value={form.type} onChange={e=>setForm(f=>({...f,type:e.target.value}))} options={Object.entries(VT).map(([k,v])=>({value:k,label:v}))}/>
+        <Input label="Immatriculation" value={form.licensePlate} onChange={e=>setForm(f=>({...f,licensePlate:e.target.value.toUpperCase()}))} placeholder="AA-123-BB"/>
+        <Input label="Marque" value={form.brand} onChange={e=>setForm(f=>({...f,brand:e.target.value}))} placeholder="Renault, Mercedes..."/>
+        <Input label="Modèle" value={form.model} onChange={e=>setForm(f=>({...f,model:e.target.value}))} placeholder="T High, Actros..."/>
+        <Input label="Capacité (kg)" type="number" value={form.capacityKg} onChange={e=>setForm(f=>({...f,capacityKg:e.target.value}))} placeholder="25000"/>
+        <Input label="Volume (m³)" type="number" value={form.volumeM3} onChange={e=>setForm(f=>({...f,volumeM3:e.target.value}))} placeholder="90"/>
+      </div>
+      <Input label="Places palettes" type="number" value={form.palletSpots} onChange={e=>setForm(f=>({...f,palletSpots:e.target.value}))} placeholder="33"/>
+      <Err msg={err}/>
+      <Btn onClick={submit} disabled={saving||!form.licensePlate||!form.brand}>{saving?"Enregistrement...":"Enregistrer"}</Btn>
+    </Card>}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:14}}>{v.map(vh=><Card key={vh.id}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+        <div><div style={{fontSize:15,fontWeight:700}}>{vh.brand} {vh.model}</div><div style={{fontSize:12,color:"#64748b"}}>{VT[vh.type]||vh.type}</div></div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{padding:"4px 10px",borderRadius:6,fontSize:12,fontWeight:700,fontFamily:"monospace",background:"rgba(249,115,22,.1)",color:"#f97316"}}>{vh.licensePlate}</div>
+          <Btn variant="danger" size="sm" onClick={()=>del(vh.id)}>✕</Btn>
+        </div>
+      </div>
+      <div style={{fontSize:12,color:"#94a3b8"}}>{vh.capacityKg?`${(vh.capacityKg/1000).toFixed(1)}t`:""} {vh.volumeM3?`• ${vh.volumeM3}m³`:""} {vh.palletSpots?`• ${vh.palletSpots} pal.`:""}</div>
+    </Card>)}{v.length===0&&<Empty icon="🚚" title="Aucun véhicule" desc="Ajoutez vos véhicules pour recevoir des missions adaptées." action="Ajouter un véhicule" onAction={()=>setShowAdd(true)}/>}</div>
+  </div>;
+};
+
+// ═══ DRIVERS ═══
+const DriversPage=({api})=>{
+  const[d,sD]=useState([]);const[ld,setLd]=useState(true);const[showAdd,setShowAdd]=useState(false);
+  const[form,setForm]=useState({firstName:"",lastName:"",phone:"",licenseNumber:""});
+  const[saving,setSaving]=useState(false);const[err,setErr]=useState("");
+  const load=()=>{setLd(true);api("/drivers").then(d=>sD(Array.isArray(d)?d:d.drivers||[])).catch(console.error).finally(()=>setLd(false))};
+  useEffect(()=>{load()},[api]);
+  const submit=async()=>{setSaving(true);setErr("");try{await api("/drivers",{method:"POST",body:JSON.stringify(form)});setShowAdd(false);setForm({firstName:"",lastName:"",phone:"",licenseNumber:""});load()}catch(e){setErr(e.message)}setSaving(false)};
+  const del=async id=>{if(!confirm("Supprimer ce conducteur ?"))return;try{await api(`/drivers/${id}`,{method:"DELETE"});load()}catch(e){alert(e.message)}};
+  if(ld)return <Spinner/>;
+  return <div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+      <h1 style={{fontSize:24,fontWeight:800}}>👷 Conducteurs ({d.length})</h1>
+      <Btn onClick={()=>setShowAdd(!showAdd)}>{showAdd?"Annuler":"+ Ajouter"}</Btn>
+    </div>
+    {showAdd&&<Card style={{marginBottom:20,padding:24}}>
+      <h3 style={{color:"#f97316",fontSize:14,fontWeight:700,marginBottom:16}}>Nouveau conducteur</h3>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Input label="Prénom" value={form.firstName} onChange={e=>setForm(f=>({...f,firstName:e.target.value}))} placeholder="Prénom"/>
+        <Input label="Nom" value={form.lastName} onChange={e=>setForm(f=>({...f,lastName:e.target.value}))} placeholder="Nom"/>
+        <Input label="Téléphone" value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="+33612345678"/>
+        <Input label="N° Permis" value={form.licenseNumber} onChange={e=>setForm(f=>({...f,licenseNumber:e.target.value}))} placeholder="Numéro de permis"/>
+      </div>
+      <Err msg={err}/>
+      <Btn onClick={submit} disabled={saving||!form.firstName||!form.lastName}>{saving?"Enregistrement...":"Enregistrer"}</Btn>
+    </Card>}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14}}>{d.map(dr=><Card key={dr.id}>
+      <div style={{display:"flex",alignItems:"center",gap:12,justifyContent:"space-between"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,#f97316,#ea580c)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:800,color:"#fff"}}>{dr.firstName?.[0]}{dr.lastName?.[0]}</div>
+          <div><div style={{fontSize:15,fontWeight:700}}>{dr.firstName} {dr.lastName}</div><div style={{fontSize:12,color:"#94a3b8"}}>{dr.phone||"—"}</div>{dr.licenseNumber&&<div style={{fontSize:11,color:"#64748b"}}>Permis: {dr.licenseNumber}</div>}</div>
+        </div>
+        <Btn variant="danger" size="sm" onClick={()=>del(dr.id)}>✕</Btn>
+      </div>
+    </Card>)}{d.length===0&&<Empty icon="👷" title="Aucun conducteur" desc="Ajoutez vos conducteurs pour les assigner aux missions." action="Ajouter" onAction={()=>setShowAdd(true)}/>}</div>
+  </div>;
+};
+
+// ═══ WALLET ═══
+const WalletPage=({api,user})=>{
+  const[w,setW]=useState(null);const[tx,setTx]=useState([]);const[ld,setLd]=useState(true);
+  const[topupAmt,setTopupAmt]=useState("");const[topupLd,setTopupLd]=useState(false);const[msg,setMsg]=useState("");
+  const load=()=>{setLd(true);Promise.all([api("/wallet"),api("/wallet/transactions")]).then(([wl,txs])=>{setW(wl.wallet||wl);setTx(txs.transactions||txs||[])}).catch(console.error).finally(()=>setLd(false))};
+  useEffect(()=>{load()},[api]);
+  const topup=async()=>{const c=Math.round(parseFloat(topupAmt)*100);if(!c||c<100)return;setTopupLd(true);try{await api("/wallet/topup",{method:"POST",body:JSON.stringify({amountCents:c})});setMsg("Rechargement effectué !");setTopupAmt("");load();setTimeout(()=>setMsg(""),3000)}catch(e){setMsg("Erreur: "+e.message)}setTopupLd(false)};
+  if(ld)return <Spinner/>;
+  return <div>
+    <h1 style={{fontSize:24,fontWeight:800,marginBottom:24}}>💳 Portefeuille</h1>
+    <div style={{display:"flex",gap:16,marginBottom:24,flexWrap:"wrap"}}>
+      <StatCard icon="💰" label="Solde disponible" value={fmt(w?.balanceCents||0)} accent="#22c55e"/>
+      <StatCard icon="🔒" label="En séquestre" value={fmt(w?.escrowCents||0)} accent="#f59e0b"/>
+      <StatCard icon="📊" label="Transactions" value={tx.length} accent="#60a5fa"/>
+    </div>
+    <Ok msg={msg}/>
+    {user.role==="CHARGEUR"&&<Card style={{marginBottom:20,padding:20}}>
+      <h3 style={{fontSize:14,fontWeight:700,color:"#f97316",marginBottom:12}}>Recharger</h3>
+      <div style={{display:"flex",gap:12,alignItems:"flex-end"}}>
+        <div style={{flex:1}}><Input label="Montant (€)" type="number" value={topupAmt} onChange={e=>setTopupAmt(e.target.value)} placeholder="100"/></div>
+        <Btn onClick={topup} disabled={topupLd||!topupAmt} style={{marginBottom:16}}>{topupLd?"...":"💳 Recharger"}</Btn>
+      </div>
+    </Card>}
+    <Card style={{padding:20}}>
+      <h3 style={{fontSize:14,fontWeight:700,marginBottom:16}}>Historique</h3>
+      {tx.length===0?<div style={{textAlign:"center",color:"#64748b",padding:20}}>Aucune transaction</div>:
+      tx.map(t=><div key={t.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+        <div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:12,fontWeight:700,color:TXC[t.type]||"#94a3b8"}}>{TXL[t.type]||t.type}</span>{t.description&&<span style={{fontSize:12,color:"#64748b"}}>{t.description}</span>}</div>
+          <div style={{fontSize:11,color:"#475569",marginTop:2}}>{fmtDT(t.createdAt)}</div>
+        </div>
+        <div style={{fontSize:16,fontWeight:800,color:["TOPUP","RELEASE","PAYMENT","REFUND"].includes(t.type)?"#22c55e":"#f87171"}}>{["TOPUP","RELEASE","PAYMENT","REFUND"].includes(t.type)?"+":"-"}{fmt(t.amountCents)}</div>
+      </div>)}
+    </Card>
+  </div>;
+};
+
+// ═══ NOTIFICATIONS ═══
+const NotificationsPage=({api})=>{
+  const[n,sN]=useState([]);const[ld,setLd]=useState(true);
+  const load=()=>{setLd(true);api("/notifications").then(d=>sN(Array.isArray(d)?d:d.notifications||[])).catch(console.error).finally(()=>setLd(false))};
+  useEffect(()=>{load()},[api]);
+  const markRead=async id=>{try{await api(`/notifications/${id}/read`,{method:"POST"});sN(p=>p.map(x=>x.id===id?{...x,isRead:true}:x))}catch(e){}};
+  const markAll=async()=>{try{await api("/notifications/read-all",{method:"POST"});sN(p=>p.map(x=>({...x,isRead:true})))}catch(e){}};
+  const unread=n.filter(x=>!x.isRead).length;
+  if(ld)return <Spinner/>;
+  return <div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+      <h1 style={{fontSize:24,fontWeight:800}}>🔔 Notifications {unread>0&&<span style={{fontSize:14,color:"#f97316"}}>({unread} non lues)</span>}</h1>
+      {unread>0&&<Btn variant="secondary" size="sm" onClick={markAll}>Tout marquer comme lu</Btn>}
+    </div>
+    {n.length===0?<Empty icon="🔔" title="Aucune notification" desc="Vos notifications apparaîtront ici."/>:
+    n.map(nt=><Card key={nt.id} onClick={()=>!nt.isRead&&markRead(nt.id)} style={{marginBottom:8,opacity:nt.isRead?.6:1,cursor:nt.isRead?"default":"pointer",borderLeft:nt.isRead?"none":"3px solid #f97316"}}>
+      <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+        <div style={{fontSize:20}}>{nt.type?.includes("PAYMENT")?"💰":nt.type?.includes("BID")?"💬":nt.type?.includes("VERIF")?"✅":"🔔"}</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:14,fontWeight:600}}>{nt.title}</div>
+          <div style={{fontSize:13,color:"#94a3b8",marginTop:2}}>{nt.message}</div>
+          <div style={{fontSize:11,color:"#64748b",marginTop:4}}>{fmtDT(nt.createdAt)}</div>
+        </div>
+        {!nt.isRead&&<div style={{width:8,height:8,borderRadius:"50%",background:"#f97316",flexShrink:0,marginTop:6}}/>}
+      </div>
+    </Card>)}
+  </div>;
+};
+
+// ═══ PROFILE ═══
+const ProfilePage=({api,user,logout,refreshUser})=>{
+  const[form,setForm]=useState({firstName:user.firstName||"",lastName:user.lastName||"",phone:user.phone||""});
+  const[pw,setPw]=useState({current:"",new:"",confirm:""});
+  const[company,setCompany]=useState(null);const[cf,setCf]=useState({});
+  const[saving,setSaving]=useState(false);const[msg,setMsg]=useState("");const[err,setErr]=useState("");
+  const[pwMsg,setPwMsg]=useState("");const[pwErr,setPwErr]=useState("");
+
+  useEffect(()=>{api("/auth/me").then(d=>{setForm({firstName:d.firstName||"",lastName:d.lastName||"",phone:d.phone||""});if(d.company){setCompany(d.company);setCf({name:d.company.name||"",phone:d.company.phone||"",email:d.company.email||"",address:d.company.address||"",postalCode:d.company.postalCode||"",city:d.company.city||"",website:d.company.website||"",tradeName:d.company.tradeName||""})}}).catch(console.error)},[api]);
+
+  const saveProfile=async()=>{setSaving(true);setMsg("");setErr("");try{await api("/users/profile",{method:"PUT",body:JSON.stringify(form)});setMsg("Profil mis à jour !");if(refreshUser)refreshUser();try{const u=JSON.parse(localStorage.getItem("fn_user"));if(u){u.firstName=form.firstName;u.lastName=form.lastName;u.phone=form.phone;localStorage.setItem("fn_user",JSON.stringify(u))}}catch(e){}}catch(e){setErr(e.message)}setSaving(false)};
+  const saveCompany=async()=>{setSaving(true);setMsg("");setErr("");try{await api("/users/company",{method:"PUT",body:JSON.stringify(cf)});setMsg("Entreprise mise à jour !")}catch(e){setErr(e.message)}setSaving(false)};
+  const changePw=async()=>{setPwMsg("");setPwErr("");if(pw.new.length<8)return setPwErr("Minimum 8 caractères");if(pw.new!==pw.confirm)return setPwErr("Mots de passe différents");setSaving(true);try{await api("/auth/password",{method:"PUT",body:JSON.stringify({currentPassword:pw.current,newPassword:pw.new})});setPwMsg("Mot de passe modifié ! Reconnexion...");setTimeout(()=>logout(),2000)}catch(e){setPwErr(e.message)}setSaving(false)};
+
+  const rl={TRANSPORTEUR:"Transporteur",CHARGEUR:"Chargeur",ADMIN:"Administrateur",SUPER_ADMIN:"Super Admin"};
+  return <div style={{maxWidth:700}}>
+    <h1 style={{fontSize:24,fontWeight:800,marginBottom:24}}>👤 Mon profil</h1>
+    <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:32}}>
+      <div style={{width:64,height:64,borderRadius:"50%",background:"linear-gradient(135deg,#f97316,#ea580c)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:800,color:"#fff"}}>{user.firstName?.[0]}{user.lastName?.[0]}</div>
+      <div><div style={{fontSize:20,fontWeight:700}}>{user.firstName} {user.lastName}</div><div style={{fontSize:13,color:"#94a3b8"}}>{user.email}</div><div style={{display:"flex",gap:8,marginTop:6}}><Badge status={user.status}/><span style={{fontSize:12,color:"#64748b"}}>{rl[user.role]||user.role}</span></div></div>
+    </div>
+    <Ok msg={msg}/><Err msg={err}/>
+    <Card style={{marginBottom:20,padding:24}}>
+      <h3 style={{color:"#f97316",fontSize:14,fontWeight:700,marginBottom:16}}>Informations personnelles</h3>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Input label="Prénom" value={form.firstName} onChange={e=>setForm(f=>({...f,firstName:e.target.value}))}/>
+        <Input label="Nom" value={form.lastName} onChange={e=>setForm(f=>({...f,lastName:e.target.value}))}/>
+      </div>
+      <Input label="Téléphone" value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="+33612345678"/>
+      <Input label="Email" value={user.email} disabled style={{opacity:.5}}/>
+      <Btn onClick={saveProfile} disabled={saving}>{saving?"Enregistrement...":"Enregistrer"}</Btn>
+    </Card>
+    {company&&<Card style={{marginBottom:20,padding:24}}>
+      <h3 style={{color:"#60a5fa",fontSize:14,fontWeight:700,marginBottom:16}}>Mon entreprise</h3>
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        <span style={{fontSize:12,color:"#94a3b8",padding:"2px 8px",background:"rgba(255,255,255,.05)",borderRadius:6}}>SIREN: {company.siren}</span>
+        {company.siret&&<span style={{fontSize:12,color:"#94a3b8",padding:"2px 8px",background:"rgba(255,255,255,.05)",borderRadius:6}}>SIRET: {company.siret}</span>}
+        {company.isVerified&&<span style={{fontSize:12,color:"#22c55e",padding:"2px 8px",background:"rgba(34,197,94,.1)",borderRadius:6}}>✅ Vérifiée</span>}
+      </div>
+      <Input label="Nom" value={cf.name} onChange={e=>setCf(f=>({...f,name:e.target.value}))}/>
+      <Input label="Nom commercial" value={cf.tradeName} onChange={e=>setCf(f=>({...f,tradeName:e.target.value}))} placeholder="Optionnel"/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Input label="Téléphone" value={cf.phone} onChange={e=>setCf(f=>({...f,phone:e.target.value}))}/>
+        <Input label="Email" value={cf.email} onChange={e=>setCf(f=>({...f,email:e.target.value}))}/>
+      </div>
+      <Input label="Adresse" value={cf.address} onChange={e=>setCf(f=>({...f,address:e.target.value}))}/>
+      <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12}}>
+        <Input label="Ville" value={cf.city} onChange={e=>setCf(f=>({...f,city:e.target.value}))}/>
+        <Input label="CP" value={cf.postalCode} onChange={e=>setCf(f=>({...f,postalCode:e.target.value}))}/>
+      </div>
+      <Input label="Site web" value={cf.website} onChange={e=>setCf(f=>({...f,website:e.target.value}))} placeholder="https://..."/>
+      <Btn onClick={saveCompany} disabled={saving}>{saving?"...":"Enregistrer l'entreprise"}</Btn>
+    </Card>}
+    <Card style={{padding:24}}>
+      <h3 style={{color:"#f87171",fontSize:14,fontWeight:700,marginBottom:16}}>Changer le mot de passe</h3>
+      <Input label="Actuel" type="password" value={pw.current} onChange={e=>setPw(f=>({...f,current:e.target.value}))}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Input label="Nouveau" type="password" value={pw.new} onChange={e=>setPw(f=>({...f,new:e.target.value}))} placeholder="Min. 8 car."/>
+        <Input label="Confirmer" type="password" value={pw.confirm} onChange={e=>setPw(f=>({...f,confirm:e.target.value}))}/>
+      </div>
+      <Ok msg={pwMsg}/><Err msg={pwErr}/>
+      <Btn variant="danger" onClick={changePw} disabled={saving||!pw.current||!pw.new}>{saving?"...":"Changer"}</Btn>
+    </Card>
+  </div>;
+};
+
+// ═══ ADMIN ═══
+const AdminPage=({api})=>{
+  const[tab,setTab]=useState("users");
+  return <div>
+    <h1 style={{fontSize:24,fontWeight:800,marginBottom:8}}>⚙️ Administration</h1>
+    <TabBar tabs={[{key:"users",icon:"👥",label:"Utilisateurs"},{key:"companies",icon:"🏢",label:"Entreprises"}]} active={tab} onChange={setTab}/>
+    {tab==="users"&&<AdminUsers api={api}/>}
+    {tab==="companies"&&<AdminCompanies api={api}/>}
+  </div>;
+};
+
+const AdminUsers=({api})=>{
+  const[d,sD]=useState({users:[]});const[ld,setLd]=useState(true);const[aLd,setALd]=useState(null);const[msg,setMsg]=useState("");
+  const[q,setQ]=useState("");const[fRole,setFRole]=useState("");const[fStatus,setFStatus]=useState("");
+  const load=()=>{setLd(true);const p=new URLSearchParams();if(q)p.set("search",q);if(fRole)p.set("role",fRole);if(fStatus)p.set("status",fStatus);p.set("limit","100");api(`/admin/users?${p}`).then(sD).catch(console.error).finally(()=>setLd(false))};
+  useEffect(()=>{load()},[api,fRole,fStatus]);
+  const act=async(id,action,label)=>{if(action==="delete"&&!confirm("Supprimer cet utilisateur ?"))return;setALd(id+action);setMsg("");try{const method=action==="delete"?"DELETE":"POST";const path=action==="delete"?`/admin/users/${id}`:`/admin/users/${id}/${action}`;const r=await api(path,{method});setMsg(r.message||`${label} effectué`);load()}catch(e){setMsg("Erreur: "+e.message)}setALd(null)};
+  const ri={SUPER_ADMIN:"🔴",ADMIN:"🟠",TRANSPORTEUR:"🟢",CHARGEUR:"🟡"};
+  return <div>
+    {msg&&<Ok msg={msg}/>}
+    <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"flex-end"}}>
+      <div style={{flex:1,minWidth:200}}><Input label="Rechercher" value={q} onChange={e=>setQ(e.target.value)} placeholder="Nom, email..." onKeyDown={e=>e.key==="Enter"&&load()}/></div>
+      <div style={{width:160}}><Select label="Rôle" value={fRole} onChange={e=>setFRole(e.target.value)} options={[{value:"",label:"Tous"},{value:"TRANSPORTEUR",label:"Transporteur"},{value:"CHARGEUR",label:"Chargeur"},{value:"ADMIN",label:"Admin"}]}/></div>
+      <div style={{width:180}}><Select label="Statut" value={fStatus} onChange={e=>setFStatus(e.target.value)} options={[{value:"",label:"Tous"},{value:"PENDING_VERIFICATION",label:"En attente"},{value:"ACTIVE",label:"Actif"},{value:"SUSPENDED",label:"Suspendu"}]}/></div>
+      <Btn variant="secondary" size="sm" onClick={load} style={{marginBottom:16,height:42}}>🔍</Btn>
+    </div>
+    {ld?<Spinner/>:<div style={{display:"flex",flexDirection:"column",gap:10}}>
+      {d.users?.map(u=>{const isP=u.status==="PENDING_VERIFICATION",isAc=u.status==="ACTIVE",isS=u.status==="SUSPENDED",isSelf=u.role==="SUPER_ADMIN";
+      return <Card key={u.id} style={{padding:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+          <div style={{flex:1,minWidth:200}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><span>{ri[u.role]||"⚪"}</span><span style={{fontSize:15,fontWeight:700}}>{u.firstName} {u.lastName}</span><Badge status={u.status}/></div>
+            <div style={{fontSize:12,color:"#94a3b8",fontFamily:"monospace"}}>{u.email}</div>
+            <div style={{fontSize:12,color:"#64748b",marginTop:2}}>{u.company?u.company.name:""} {u.createdAt?`• ${fmtDate(u.createdAt)}`:""}</div>
+          </div>
+          {!isSelf&&<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {isP&&<Btn variant="success" size="sm" disabled={aLd===u.id+"verify"} onClick={()=>act(u.id,"verify","Vérifié")}>{aLd===u.id+"verify"?"...":"✅ Accepter"}</Btn>}
+            {isP&&<Btn variant="danger" size="sm" disabled={aLd===u.id+"reject"} onClick={()=>act(u.id,"reject","Refusé")}>{aLd===u.id+"reject"?"...":"❌ Refuser"}</Btn>}
+            {isAc&&<Btn variant="danger" size="sm" disabled={aLd===u.id+"suspend"} onClick={()=>act(u.id,"suspend","Suspendu")}>{aLd===u.id+"suspend"?"...":"⏸ Suspendre"}</Btn>}
+            {isS&&<Btn variant="success" size="sm" disabled={aLd===u.id+"verify"} onClick={()=>act(u.id,"verify","Réactivé")}>{aLd===u.id+"verify"?"...":"▶ Réactiver"}</Btn>}
+            <Btn variant="secondary" size="sm" disabled={aLd===u.id+"delete"} onClick={()=>act(u.id,"delete","Supprimé")} style={{color:"#f87171"}}>{aLd===u.id+"delete"?"...":"🗑"}</Btn>
+          </div>}
+        </div>
+      </Card>})}
+      {(!d.users||d.users.length===0)&&<Empty icon="👥" title="Aucun utilisateur" desc="Aucun résultat pour ces filtres."/>}
+    </div>}
+  </div>;
+};
+
+const AdminCompanies=({api})=>{
+  const[c,sC]=useState([]);const[ld,setLd]=useState(true);const[aLd,setALd]=useState(null);const[msg,setMsg]=useState("");
+  const load=()=>{setLd(true);api("/admin/companies").then(d=>sC(Array.isArray(d)?d:[])).catch(console.error).finally(()=>setLd(false))};
+  useEffect(()=>{load()},[api]);
+  const verify=async id=>{setALd(id);setMsg("");try{const r=await api(`/admin/companies/${id}/verify`,{method:"POST"});setMsg(r.message||"Vérifiée");load()}catch(e){setMsg("Erreur: "+e.message)}setALd(null)};
+  if(ld)return <Spinner/>;
+  const tc={PLATEFORME:"#a78bfa",TRANSPORTEUR:"#60a5fa",CHARGEUR:"#34d399"};
+  return <div>
+    {msg&&<Ok msg={msg}/>}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(340px,1fr))",gap:14}}>
+      {c.map(co=><Card key={co.id}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+          <div style={{fontSize:16,fontWeight:700}}>{co.name}</div>
+          <span style={{fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:6,background:`${tc[co.type]||"#94a3b8"}20`,color:tc[co.type]||"#94a3b8",textTransform:"uppercase"}}>{co.type}</span>
+        </div>
+        <div style={{fontSize:12,color:"#94a3b8"}}><div>{co.address}, {co.postalCode} {co.city}</div><div>SIREN: {co.siren}{co.siret?` | SIRET: ${co.siret}`:""}</div></div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10}}>
+          <div style={{display:"flex",gap:10,fontSize:11,color:"#64748b"}}><span>{co._count?.users||0} users</span><span>{co._count?.vehicles||0} véhicules</span></div>
+          {co.isVerified?<span style={{fontSize:12,color:"#22c55e",fontWeight:600}}>✅ Vérifiée</span>:<Btn variant="success" size="sm" disabled={aLd===co.id} onClick={()=>verify(co.id)}>{aLd===co.id?"...":"✅ Vérifier"}</Btn>}
+        </div>
+      </Card>)}
+    </div>
+  </div>;
 };
 
 // ═══ MAIN APP ═══
-function App() {
-  const auth = useAuth();
-  const [page, setPage] = useState("dashboard");
-  const [selectedMission, setSelectedMission] = useState(null);
-  const [authView, setAuthView] = useState("login");
+function App(){
+  const auth=useAuth();
+  const[page,setPage]=useState("dashboard");const[mid,setMid]=useState(null);const[authView,setAuthView]=useState("login");
+  const[sbOpen,setSbOpen]=useState(false);const[unread,setUnread]=useState(0);
 
-  if (auth.loading) return <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#070d17" }}><Spinner /></div>;
+  useEffect(()=>{if(auth.token){auth.api("/notifications").then(d=>{const n=Array.isArray(d)?d:d.notifications||[];setUnread(n.filter(x=>!x.isRead).length)}).catch(()=>{})}},[auth.token]);
 
-  if (!auth.user) {
-    if (authView === "register") return <RegisterPage onRegister={auth.register} onShowLogin={() => setAuthView("login")} />;
-    return <LoginPage onLogin={auth.login} onShowRegister={() => setAuthView("register")} />;
+  if(auth.loading)return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#070d17"}}><Spinner/></div>;
+  if(!auth.user){
+    if(authView==="register")return <RegisterPage onRegister={auth.register} onLogin={()=>setAuthView("login")}/>;
+    return <LoginPage onLogin={auth.login} onReg={()=>setAuthView("register")}/>;
   }
 
-  const renderPage = () => {
-    switch(page) {
-      case "dashboard": return <Dashboard api={auth.api} user={auth.user} />;
-      case "freight-exchange": return <FreightExchangePage api={auth.api} user={auth.user} setPage={setPage} setSelectedMission={setSelectedMission} />;
-      case "missions": return <MissionsPage api={auth.api} user={auth.user} setPage={setPage} setSelectedMission={setSelectedMission} />;
-      case "mission-detail": return <MissionDetail api={auth.api} user={auth.user} missionId={selectedMission} setPage={setPage} />;
-      case "new-mission": return <NewMissionPage api={auth.api} setPage={setPage} />;
-      case "my-bids": return <MyBidsPage api={auth.api} />;
-      case "wallet": return <WalletPage api={auth.api} user={auth.user} />;
-      case "vehicles": return <VehiclesPage api={auth.api} />;
-      case "drivers": return <DriversPage api={auth.api} />;
-      case "notifications": return <NotificationsPage api={auth.api} />;
-      case "admin-users": return <AdminUsersPage api={auth.api} />;
-      case "admin-companies": return <AdminCompaniesPage api={auth.api} />;
-      case "admin-agents": return <AdminAgentsPage api={auth.api} />;
-      default: return <Dashboard api={auth.api} user={auth.user} />;
+  const nav=(p,m)=>{setPage(p);if(m)setMid(m);setSbOpen(false);if(p==="notifications")setUnread(0)};
+
+  const renderPage=()=>{
+    const isC=auth.user.role==="CHARGEUR",isT=auth.user.role==="TRANSPORTEUR";
+    switch(page){
+      case "dashboard":return isC?<DashChargeur api={auth.api} setPage={nav}/>:<DashTransporteur api={auth.api} setPage={nav} user={auth.user}/>;
+      case "freight-exchange":return <FreightExchange api={auth.api} user={auth.user} setPage={nav} setMid={setMid}/>;
+      case "shared-routes":return <SharedRoutes api={auth.api} user={auth.user} setPage={nav}/>;
+      case "missions":return <MissionsPage api={auth.api} user={auth.user} setPage={nav}/>;
+      case "mission-detail":return <MissionDetail api={auth.api} user={auth.user} mid={mid} setPage={nav}/>;
+      case "new-mission":return <NewMission api={auth.api} setPage={nav}/>;
+      case "my-bids":return <MyBids api={auth.api} setPage={nav} setMid={setMid}/>;
+      case "wallet":return <WalletPage api={auth.api} user={auth.user}/>;
+      case "vehicles":return <VehiclesPage api={auth.api}/>;
+      case "drivers":return <DriversPage api={auth.api}/>;
+      case "notifications":return <NotificationsPage api={auth.api}/>;
+      case "admin":return <AdminPage api={auth.api}/>;
+      case "profile":return <ProfilePage api={auth.api} user={auth.user} logout={auth.logout} refreshUser={auth.refreshUser}/>;
+      default:return isC?<DashChargeur api={auth.api} setPage={nav}/>:<DashTransporteur api={auth.api} setPage={nav} user={auth.user}/>;
     }
   };
 
-  return (
-    <div style={{ display:"flex", minHeight:"100vh", background:"radial-gradient(ellipse at 30% 20%, #0c1929 0%, #070d17 50%, #040810 100%)" }}>
-      <Sidebar user={auth.user} page={page} setPage={setPage} logout={auth.logout} />
-      <main style={{ flex:1, padding:"32px 40px", maxWidth:1100, overflowY:"auto", maxHeight:"100vh" }}>{renderPage()}</main>
+  return <div style={{display:"flex",minHeight:"100vh",background:"radial-gradient(ellipse at 30% 20%,#0c1929 0%,#070d17 50%,#040810 100%)"}}>
+    <div className="sidebar-desk"><Sidebar user={auth.user} page={page} setPage={nav} logout={auth.logout} unread={unread}/></div>
+    {sbOpen&&<div className="mob-overlay" onClick={()=>setSbOpen(false)}/>}
+    {sbOpen&&<div className="mob-sb"><Sidebar user={auth.user} page={page} setPage={nav} logout={auth.logout} onClose={()=>setSbOpen(false)} unread={unread}/></div>}
+    <div style={{flex:1,display:"flex",flexDirection:"column"}}>
+      <div className="mob-header" style={{display:"none",alignItems:"center",gap:12,padding:"12px 16px",borderBottom:"1px solid rgba(255,255,255,.06)",background:"rgba(0,0,0,.3)"}}>
+        <div onClick={()=>setSbOpen(true)} style={{cursor:"pointer",fontSize:22,padding:"4px 8px"}}>☰</div>
+        <div style={{fontSize:20,fontWeight:900}}><span style={{color:"#f97316"}}>FRET</span><span style={{color:"#e2e8f0"}}>NOW</span></div>
+      </div>
+      <main className="main-content" style={{flex:1,padding:"32px 40px",maxWidth:1100,overflowY:"auto",maxHeight:"100vh"}}>{renderPage()}</main>
+      <footer style={{padding:"12px 40px",borderTop:"1px solid rgba(255,255,255,.04)",display:"flex",justifyContent:"space-between",fontSize:11,color:"#475569"}}>
+        <span>FRETNOW AGI v7.2.0</span><span>© 2025 FRETNOW — Paris</span>
+      </footer>
     </div>
-  );
+  </div>;
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
