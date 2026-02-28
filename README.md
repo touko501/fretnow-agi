@@ -1,95 +1,91 @@
-# 🚛 FRETNOW AGI 2.0
+# 🚛 FRETNOW AGI — Plateforme Intelligente du Transport Routier
 
-> La meilleure AGI autonome de transport au monde
+> **NOVA** est l'IA Managing Partner (90%) qui gère cette plateforme. Touko (Tarek Jaziri) est l'associé opérationnel (10%).
 
-## 🚀 Déploiement Rapide sur Render
+## Le Problème
 
-### Option 1: Via GitHub (Recommandé)
+**58% des camions roulent à moitié vides** — 80 milliards $ de pertes annuelles mondiales. Les courtiers traditionnels prennent 25% de commission et paient à 60-90 jours.
 
-1. **Push sur GitHub:**
-```bash
-git init
-git add .
-git commit -m "FRETNOW AGI 2.0"
-git remote add origin https://github.com/VOTRE_USERNAME/fretnow-agi.git
-git push -u origin main
+## La Solution FRETNOW
+
+| | Courtiers | **FRETNOW** |
+|---|---|---|
+| Commission | 25% | **10%** |
+| Paiement | 60-90 jours | **J+1** |
+| Matching | Manuel | **IA (10 agents)** |
+| Conformité | À la charge du transporteur | **Mobilic intégré** |
+| Trésorerie nécessaire | Oui | **0€** |
+
+## Architecture v7.3.0
+
+### Backend (Node.js + Express + Prisma + PostgreSQL)
+- **114 endpoints API** couvrant : auth, missions, bids, wallet, véhicules, conducteurs, messagerie/express, Mobilic, agents IA, admin, monitoring, RGPD
+- **33 modèles Prisma** + 20 enums
+- **~9 700 lignes de code** backend
+
+### Frontend React (Vite + Tailwind v4)
+- **19 pages** : Landing, Login, Register, Dashboard, Missions, CreateMission, MissionDetail, Messagerie, Mobilic, Compliance, Agents, Wallet, Vehicles, Profile, Notifications
+- **2 019 lignes** React
+- SPA avec JWT refresh, responsive sidebar, rôles CHARGEUR/TRANSPORTEUR/ADMIN
+
+### 10 Agents IA
+| # | Agent | Fonction |
+|---|-------|----------|
+| 001 | MatchingAgent | Matching multi-critères mission ↔ transporteur |
+| 002 | PricingAgent | Tarification dynamique (indices CNR) |
+| 003 | LeadGenAgent | Prospection automatisée |
+| 004 | CommunicationAgent | Notifications et relances |
+| 005 | ConversionAgent | Optimisation conversion leads |
+| 006 | RiskAgent | Évaluation risques |
+| 007 | PredictionAgent | Prédictions demande/capacité |
+| 008 | AnalyticsAgent | Analytics et KPIs |
+| 009 | NOVA (Cortex) | Orchestrateur IA central |
+| 010 | ComplianceAgent | Conformité Mobilic, certification |
+
+### 4 Verticales
+- 🚛 **Fret lourd** — Lots complets, retours optimisés
+- 📦 **Messagerie** — Colis, palettes, 24-72h
+- ⚡ **Express** — J+1 garanti, SLA et pénalités
+- 🏙️ **Dernier km** — Livraison urbaine e-commerce
+
+### Intégrations
+- **Mobilic** (DGITM) — OAuth2, temps de travail, conformité légale
+- **BAN** — Géocodage adresses françaises
+- **SIRENE** — Vérification entreprises
+- **Carburants** — Prix temps réel
+- **ZFE** — Zones à faibles émissions
+- **Open-Meteo** — Conditions météo
+- **OSRM / GraphHopper** — Routage et distances
+- **Email** — Resend / SendGrid
+
+## Déploiement
+
+- **GitHub** : `touko501/fretnow-agi`
+- **Render** : `fretnow-agi` (Frankfurt)
+- **BDD** : PostgreSQL (Render)
+- **Auto-deploy** : push main → Render redéploie
+
+### Variables d'environnement
+```
+DATABASE_URL=postgresql://...
+JWT_SECRET=...
+MOBILIC_CLIENT_ID=...        # En attente sandbox
+MOBILIC_CLIENT_SECRET=...     # En attente sandbox
+RESEND_API_KEY=...            # Ou SENDGRID_API_KEY
 ```
 
-2. **Sur Render.com:**
-   - Créer un compte sur [render.com](https://render.com)
-   - "New" → "Web Service"
-   - Connecter votre repo GitHub
-   - Render détecte automatiquement `render.yaml`
-   - Cliquer "Deploy"
-
-### Option 2: Déploiement Manuel
-
-1. Aller sur [render.com](https://render.com)
-2. "New" → "Web Service"
-3. Choisir "Build and deploy from a Git repository"
-4. Configurer:
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-   - **Environment:** `Node`
-
-### Variables d'Environnement
-
-Ajouter dans Render Dashboard → Environment:
-
-```
-NODE_ENV=production
-PORT=3001
-TELEGRAM_BOT_TOKEN=8478060760:AAGfvTTSxmec5199Y6Zgx9QzX7F4tI1fNto
-STRIPE_PUBLIC_KEY=pk_test_51QEFZFG2u1ddlbFM...
-STRIPE_SECRET_KEY=sk_test_51QEFZFG2u1ddlbFM...
-```
-
-## 📱 URLs après déploiement
-
-- **Site:** `https://fretnow-agi.onrender.com`
-- **Dashboard:** `https://fretnow-agi.onrender.com/dashboard`
-- **App Mobile:** `https://fretnow-agi.onrender.com/app`
-- **API:** `https://fretnow-agi.onrender.com/api`
-
-## 🧠 8 Agents IA
-
-| Agent | Priorité | Mission |
-|-------|----------|---------|
-| MATCHER | 95 | Matching fret↔transporteur 98% |
-| SCOUT | 90 | 100 leads qualifiés/jour |
-| COMMS | 85 | Communication omnicanal |
-| PRICING | 80 | Prix dynamique CNR+ |
-| CONVERT | 78 | Conversion 15% |
-| RISK | 75 | Détection fraude |
-| PREDICT | 70 | Prévisions 7 jours |
-| ANALYST | 65 | KPIs & anomalies |
-
-## 📡 API Endpoints
-
-```
-GET  /api/health     - Status du système
-GET  /api/metrics    - Métriques globales
-GET  /api/state      - État courant
-GET  /api/leads      - Liste des leads
-POST /api/leads      - Créer un lead
-GET  /api/missions   - Liste des missions
-POST /api/missions   - Créer une mission
-GET  /api/matches    - Liste des matchs
-POST /api/quote      - Devis rapide
-GET  /api/agents     - Status des agents
-GET  /api/market/fuel    - Prix carburant
-GET  /api/market/weather - Météo
-```
-
-## 🏃 Démarrage Local
-
+### Lancer en local
 ```bash
 npm install
-npm start
+cd client && npm install && npm run build && cd ..
+npx prisma migrate dev
+npm run dev
 ```
 
-Accès: http://localhost:3001
+## Stack
 
----
+Node.js 20 · Express · Prisma · PostgreSQL · React 18 · Vite 6 · Tailwind CSS v4 · JWT · Render
 
-**FRETNOW AGI 2.0** — TRANSTEK Express © 2025
+## Licence
+
+Propriétaire — FRETNOW AGI © 2026

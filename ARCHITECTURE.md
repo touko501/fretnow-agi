@@ -240,4 +240,4 @@ STRIPE_SECRET_KEY=sk_test_51QEFZFG2u1ddlbFM...
 
 ---
 
-*FRETNOW AGI 2.0 — Créé par TRANSTEK Express*
+*FRETNOW AGI 2.0 — Créé par FRETNOW AGI*

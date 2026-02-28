@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FRETNOW — Mentions Légales & CGV</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    *{font-family:'Outfit',system-ui,sans-serif}
+    body{background:#060B18;color:#e2e8f0}
+    a{color:#06B6D4}
+    h2{color:#f97316;margin-top:2.5rem;margin-bottom:1rem}
+    h3{color:#e2e8f0;margin-top:1.5rem;margin-bottom:0.5rem}
+    .content p{margin-bottom:1rem;line-height:1.7;color:#94a3b8}
+    .content ul{margin-bottom:1rem;padding-left:1.5rem;color:#94a3b8}
+    .content li{margin-bottom:0.5rem;line-height:1.6}
+    .tab-btn{padding:10px 24px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:14px;font-family:inherit;transition:all .2s}
+    .tab-active{background:rgba(249,115,22,0.15);color:#f97316}
+    .tab-inactive{background:transparent;color:#64748b}
+  </style>
+</head>
+<body>
+  <!-- Nav -->
+  <nav class="fixed top-0 left-0 right-0 z-50" style="background:rgba(6,11,24,0.9);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.05)">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="/" class="text-xl font-bold" style="color:#f97316">🚛 FRETNOW</a>
+      <a href="/app" class="text-sm" style="color:#94a3b8">← Retour à l'app</a>
+    </div>
+  </nav>
+
+  <div class="max-w-4xl mx-auto px-6 pt-24 pb-20">
+    <h1 class="text-3xl font-bold mb-2" style="color:#f97316">Informations Légales</h1>
+    <p class="mb-8" style="color:#64748b">Dernière mise à jour : 1er mars 2026</p>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-8 flex-wrap" style="background:rgba(255,255,255,0.04);padding:6px;border-radius:12px">
+      <button onclick="showTab('mentions')" id="tab-mentions" class="tab-btn tab-active">Mentions légales</button>
+      <button onclick="showTab('cgv')" id="tab-cgv" class="tab-btn tab-inactive">CGV</button>
+      <button onclick="showTab('privacy')" id="tab-privacy" class="tab-btn tab-inactive">Politique de confidentialité</button>
+    </div>
+
+    <!-- MENTIONS LÉGALES -->
+    <div id="section-mentions" class="content">
+      <h2>Mentions Légales</h2>
+      
+      <h3>Éditeur du site</h3>
+      <p>
+        <strong style="color:#e2e8f0">FRETNOW AGI</strong><br>
+        Plateforme digitale de mise en relation dans le transport routier<br>
+        Société en cours d'immatriculation (SAS)<br>
+        Siège social : Paris, France<br>
+        Email : <a href="mailto:fretnow.nova@outlook.com">fretnow.nova@outlook.com</a><br>
+        Directeur de publication : Tarek Jaziri
+      </p>
+
+      <h3>Hébergement</h3>
+      <p>
+        Render Services, Inc.<br>
+        525 Brannan St, Suite 300, San Francisco, CA 94107, USA<br>
+        Serveurs : Frankfurt, Allemagne (UE)<br>
+        <a href="https://render.com" target="_blank">render.com</a>
+      </p>
+
+      <h3>Propriété intellectuelle</h3>
+      <p>L'ensemble des contenus du site FRETNOW (textes, images, logos, code source, design) est protégé par le droit de la propriété intellectuelle. Toute reproduction, représentation ou diffusion, totale ou partielle, sans autorisation expresse est interdite.</p>
+
+      <h3>Responsabilité</h3>
+      <p>FRETNOW est une plateforme de mise en relation. FRETNOW n'est ni commissionnaire de transport, ni transporteur, ni transitaire. FRETNOW ne se substitue pas aux obligations légales des expéditeurs et des transporteurs inscrits sur la plateforme.</p>
+    </div>
+
+    <!-- CGV -->
+    <div id="section-cgv" class="content" style="display:none">
+      <h2>Conditions Générales de Vente et d'Utilisation</h2>
+
+      <h3>Article 1 — Objet</h3>
+      <p>Les présentes CGV régissent l'utilisation de la plateforme FRETNOW, service de mise en relation entre expéditeurs (chargeurs) et transporteurs routiers. FRETNOW agit en qualité de plateforme digitale (CompanyType : PLATEFORME) et non en qualité de commissionnaire de transport.</p>
+
+      <h3>Article 2 — Inscription et compte</h3>
+      <p>L'utilisation de la plateforme nécessite la création d'un compte. L'utilisateur garantit l'exactitude des informations fournies, notamment le numéro SIRET de son entreprise. Tout compte peut être vérifié et validé par l'équipe FRETNOW avant activation complète.</p>
+
+      <h3>Article 3 — Fonctionnement de la plateforme</h3>
+      <p>L'expéditeur publie une mission de transport. Les transporteurs consultent les missions disponibles et soumettent des offres (enchères). L'expéditeur sélectionne l'offre de son choix. Le paiement est géré via le système de prépaiement et escrow de FRETNOW.</p>
+
+      <h3>Article 4 — Commission et paiement</h3>
+      <p>FRETNOW prélève une commission de <strong style="color:#f97316">10%</strong> sur chaque mission complétée. L'expéditeur effectue un prépaiement obligatoire au moment de la confirmation de la mission. Le montant est bloqué en escrow. Le transporteur reçoit le paiement (montant - commission) en <strong style="color:#f97316">J+1</strong> après confirmation de livraison.</p>
+
+      <h3>Article 5 — Obligations de l'expéditeur</h3>
+      <p>L'expéditeur s'engage à fournir des informations exactes sur la marchandise (poids, dimensions, nature, adresses). Le prépaiement est obligatoire. L'expéditeur doit confirmer la livraison dans les 48h suivant la réception.</p>
+
+      <h3>Article 6 — Obligations du transporteur</h3>
+      <p>Le transporteur s'engage à disposer de tous les documents et autorisations nécessaires à l'exercice de son activité (licence de transport, assurance, attestation de capacité). Le transporteur est seul responsable de la bonne exécution du transport. Pour les véhicules utilitaires légers (&lt; 3.5T), le suivi du temps de travail via Mobilic est obligatoire conformément aux articles R3312-19 et R3312-58 du Code des transports.</p>
+
+      <h3>Article 7 — Responsabilité</h3>
+      <p>FRETNOW n'est pas partie au contrat de transport entre l'expéditeur et le transporteur. FRETNOW n'assume aucune responsabilité quant à l'exécution du transport, à l'état de la marchandise ou aux délais de livraison. Chaque partie est responsable de ses obligations contractuelles et légales.</p>
+
+      <h3>Article 8 — Litiges</h3>
+      <p>En cas de litige entre un expéditeur et un transporteur, FRETNOW peut intervenir en médiation via son système de gestion des litiges. Si aucun accord amiable n'est trouvé, les parties peuvent saisir les tribunaux compétents. Le droit français est applicable.</p>
+
+      <h3>Article 9 — Résiliation</h3>
+      <p>Chaque utilisateur peut demander la clôture de son compte à tout moment, sous réserve qu'aucune mission ne soit en cours. FRETNOW se réserve le droit de suspendre ou clôturer tout compte en cas de manquement aux présentes CGV.</p>
+
+      <h3>Article 10 — Modification des CGV</h3>
+      <p>FRETNOW se réserve le droit de modifier les présentes CGV. Les utilisateurs seront informés par email et notification. La poursuite de l'utilisation après notification vaut acceptation des nouvelles conditions.</p>
+    </div>
+
+    <!-- PRIVACY -->
+    <div id="section-privacy" class="content" style="display:none">
+      <h2>Politique de Confidentialité (RGPD)</h2>
+
+      <h3>Responsable du traitement</h3>
+      <p>FRETNOW AGI, représenté par Tarek Jaziri.<br>Contact : <a href="mailto:fretnow.nova@outlook.com">fretnow.nova@outlook.com</a></p>
+
+      <h3>Données collectées</h3>
+      <p>Nous collectons les données suivantes :</p>
+      <ul>
+        <li>Données d'identification : nom, prénom, email, téléphone</li>
+        <li>Données d'entreprise : raison sociale, SIREN/SIRET, adresse</li>
+        <li>Données de transaction : missions, enchères, paiements</li>
+        <li>Données techniques : adresse IP, user agent, logs de connexion</li>
+        <li>Données de géolocalisation : uniquement pour le suivi de mission (avec consentement)</li>
+      </ul>
+
+      <h3>Finalités du traitement</h3>
+      <ul>
+        <li>Gestion des comptes utilisateurs et vérification d'identité</li>
+        <li>Mise en relation entre expéditeurs et transporteurs</li>
+        <li>Gestion des paiements et facturation</li>
+        <li>Conformité réglementaire (transport, Mobilic)</li>
+        <li>Amélioration du service et analyses statistiques anonymisées</li>
+      </ul>
+
+      <h3>Base légale</h3>
+      <p>Le traitement des données repose sur : l'exécution du contrat (CGV), le consentement de l'utilisateur, le respect d'obligations légales, et l'intérêt légitime de FRETNOW.</p>
+
+      <h3>Durée de conservation</h3>
+      <ul>
+        <li>Données de compte : durée de la relation contractuelle + 3 ans</li>
+        <li>Données de transaction : 10 ans (obligation comptable)</li>
+        <li>Logs de connexion : 12 mois</li>
+        <li>Données supprimées sur demande : dans un délai de 30 jours</li>
+      </ul>
+
+      <h3>Vos droits (RGPD)</h3>
+      <p>Conformément au Règlement Général sur la Protection des Données, vous disposez des droits suivants :</p>
+      <ul>
+        <li><strong style="color:#e2e8f0">Droit d'accès</strong> : obtenir une copie de vos données</li>
+        <li><strong style="color:#e2e8f0">Droit de rectification</strong> : corriger vos données</li>
+        <li><strong style="color:#e2e8f0">Droit à l'effacement</strong> : demander la suppression de vos données</li>
+        <li><strong style="color:#e2e8f0">Droit à la portabilité</strong> : recevoir vos données dans un format structuré</li>
+        <li><strong style="color:#e2e8f0">Droit d'opposition</strong> : vous opposer au traitement de vos données</li>
+      </ul>
+      <p>Pour exercer ces droits : <a href="mailto:fretnow.nova@outlook.com">fretnow.nova@outlook.com</a> ou via la section "Mes données" de votre compte.</p>
+
+      <h3>Sécurité</h3>
+      <p>Nous mettons en œuvre des mesures techniques et organisationnelles pour protéger vos données : chiffrement des mots de passe (bcrypt), communications HTTPS, authentification JWT, limitation de débit (rate limiting), hébergement en Union Européenne (Frankfurt).</p>
+
+      <h3>Cookies</h3>
+      <p>FRETNOW utilise uniquement des cookies techniques nécessaires au fonctionnement du service (authentification, session). Aucun cookie publicitaire ou de tracking tiers n'est utilisé.</p>
+
+      <h3>Contact CNIL</h3>
+      <p>Si vous estimez que le traitement de vos données n'est pas conforme, vous pouvez adresser une réclamation à la CNIL : <a href="https://www.cnil.fr" target="_blank">www.cnil.fr</a></p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer style="border-top:1px solid rgba(255,255,255,0.05);padding:30px;text-align:center;color:#475569;font-size:13px">
+    © 2026 FRETNOW AGI — Tous droits réservés · <a href="mailto:fretnow.nova@outlook.com" style="color:#64748b">fretnow.nova@outlook.com</a>
+  </footer>
+
+  <script>
+    function showTab(tab) {
+      ['mentions','cgv','privacy'].forEach(t => {
+        document.getElementById('section-'+t).style.display = t===tab ? 'block' : 'none';
+        document.getElementById('tab-'+t).className = 'tab-btn ' + (t===tab ? 'tab-active' : 'tab-inactive');
+      });
+    }
+  </script>
+</body>
+</html>

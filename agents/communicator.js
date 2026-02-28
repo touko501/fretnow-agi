@@ -276,7 +276,7 @@ Répondez "INFO" pour en savoir plus ou visitez fretnow.fr 📱`,
   </div>
   
   <div style="background: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
-    <p>FRETNOW - TRANSTEK Express<br>
+    <p>FRETNOW - FRETNOW AGI<br>
     <a href="https://fretnow.fr" style="color: #667eea;">fretnow.fr</a> | contact@fretnow.fr</p>
   </div>
 </body>

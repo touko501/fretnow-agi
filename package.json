@@ -1,6 +1,6 @@
 {
   "name": "fretnow-api",
-  "version": "6.1.0",
+  "version": "7.3.0",
   "description": "FRETNOW AGI — API Marketplace Fret Routier B2B",
   "main": "src/index.js",
   "scripts": {
@@ -12,7 +12,7 @@
     "db:seed": "node prisma/seed.js",
     "db:reset": "npx prisma migrate reset --force",
     "db:studio": "npx prisma studio",
-    "build": "npx prisma generate && npx prisma db push --accept-data-loss",
+    "build": "npx prisma generate && npx prisma db push --accept-data-loss && cd client && npm install && npm run build",
     "postinstall": "npx prisma generate"
   },
   "dependencies": {

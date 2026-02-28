@@ -132,6 +132,38 @@ enum DisputeStatus {
   CLOSED
 }
 
+enum MissionType {
+  FRET_LOURD
+  MESSAGERIE
+  EXPRESS
+  DERNIER_KM
+}
+
+enum SlaType {
+  BEFORE_12H
+  BEFORE_18H
+  SAME_DAY
+  J_PLUS_1
+}
+
+enum MobilicActivity {
+  DRIVE
+  WORK
+  REST
+  SUPPORT
+  TRANSFER
+  OFF
+}
+
+enum MobilicAlertType {
+  MAX_DRIVE_TIME
+  MAX_WORK_TIME
+  MIN_REST
+  MISSING_LOG
+  MAX_CONTINUOUS_DRIVE
+  MIN_BREAK
+}
+
 enum NotificationType {
   MISSION_PUBLISHED
   MISSION_ASSIGNED
@@ -259,6 +291,13 @@ model Company {
   isVerified      Boolean     @default(false)
   verifiedAt      DateTime?
 
+  // Mobilic
+  mobilicEnabled      Boolean     @default(false)
+  mobilicCompanyId    String?
+  mobilicCertified    Boolean     @default(false)
+  mobilicCertifiedAt  DateTime?
+  complianceScore     Float?
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -268,6 +307,9 @@ model Company {
   invoicesReceived Invoice[]  @relation("InvoiceReceiver")
   drivers         Driver[]
   wallet          Wallet?
+  mobilicTokens   MobilicToken[]
+  mobilicWorkLogs MobilicWorkLog[]
+  mobilicAlerts   MobilicComplianceAlert[]
 
   @@index([siren])
   @@index([siret])
@@ -291,6 +333,12 @@ model Driver {
   fimofcoExpiry   DateTime?
   adrCertified    Boolean     @default(false)
 
+  // Mobilic
+  mobilicId           String?
+  mobilicLinkedAt     DateTime?
+  maxDriveMinutes     Int         @default(600)    // 10h
+  maxWorkMinutes      Int         @default(720)    // 12h
+
   isActive        Boolean     @default(true)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -298,6 +346,7 @@ model Driver {
   missions        Mission[]   @relation("DriverMissions")
   vehicleChecks   VehicleCheck[]
   gpsPositions    GpsPosition[]
+  mobilicWorkLogs MobilicWorkLog[]
 
   @@index([companyId, isActive])
 }
@@ -367,6 +416,21 @@ model Mission {
   driver                Driver?       @relation("DriverMissions", fields: [driverId], references: [id])
 
   status                MissionStatus @default(DRAFT)
+  missionType           MissionType   @default(FRET_LOURD)
+
+  // SLA (Express/Messagerie)
+  slaType               SlaType?
+  slaDeadline           DateTime?
+  slaPenaltyCents       Int?
+
+  // Messagerie/Dernier KM
+  parcelCount           Int?
+  parcelRef             String?
+  recipientName         String?
+  recipientPhone        String?
+  signatureRequired     Boolean       @default(false)
+  proofOfDeliveryUrl    String?
+  returnTrip            Boolean       @default(false)
 
   pickupAddress         String
   pickupCity            String
@@ -464,6 +528,7 @@ model Mission {
   @@index([publishedAt])
   @@index([reference])
   @@index([vehicleTypeRequired])
+  @@index([missionType])
   @@index([deletedAt])
 }
 
@@ -1013,6 +1078,88 @@ model SharedRoute {
   @@index([departureCity])
   @@index([arrivalCity])
   @@index([departureDate])
+}
+
+// MOBILIC — Tokens OAuth2
+
+model MobilicToken {
+  id              String      @id @default(cuid())
+  companyId       String
+  company         Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  accessToken     String
+  refreshToken    String?
+  expiresAt       DateTime
+  scope           String?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([companyId])
+  @@index([expiresAt])
+}
+
+// MOBILIC — Logs temps de travail
+
+model MobilicWorkLog {
+  id              String          @id @default(cuid())
+  driverId        String
+  driver          Driver          @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  companyId       String
+  company         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  missionId       String?
+
+  activity        MobilicActivity
+  startedAt       DateTime
+  endedAt         DateTime?
+  durationMinutes Int?
+
+  startLat        Float?
+  startLon        Float?
+  endLat          Float?
+  endLon          Float?
+
+  mobilicSynced   Boolean         @default(false)
+  mobilicId       String?
+  validated       Boolean         @default(false)
+  validatedBy     String?
+  validatedAt     DateTime?
+
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([driverId, startedAt])
+  @@index([companyId])
+  @@index([missionId])
+  @@index([mobilicSynced])
+  @@index([activity])
+}
+
+// MOBILIC — Alertes conformité
+
+model MobilicComplianceAlert {
+  id              String            @id @default(cuid())
+  companyId       String
+  company         Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  driverId        String?
+
+  alertType       MobilicAlertType
+  severity        String            @default("WARNING")  // WARNING, CRITICAL
+  message         String
+  details         String?
+
+  resolved        Boolean           @default(false)
+  resolvedBy      String?
+  resolvedAt      DateTime?
+  resolvedNotes   String?
+
+  createdAt       DateTime          @default(now())
+
+  @@index([companyId, resolved])
+  @@index([driverId])
+  @@index([alertType])
+  @@index([severity, resolved])
 }
 
 // CONFIGURATION PLATEFORME
