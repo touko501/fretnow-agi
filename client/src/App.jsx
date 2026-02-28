@@ -16,6 +16,9 @@ import Agents from './pages/Agents';
 import Profile from './pages/Profile';
 import Vehicles from './pages/Vehicles';
 import Notifications from './pages/Notifications';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import Blog from './pages/Blog';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -33,6 +36,10 @@ export default function App() {
       <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Landing />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
+      <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" /> : <ForgotPassword />} />
+      <Route path="/reset-password" element={user ? <Navigate to="/dashboard" /> : <ResetPassword />} />
+      <Route path="/blog" element={<Blog />} />
+      <Route path="/blog/:slug" element={<Blog />} />
 
       {/* Protected */}
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

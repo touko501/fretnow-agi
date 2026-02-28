@@ -2,11 +2,13 @@
  * 🔌 EXTERNAL APIS SERVICE — Connexion au Monde Réel
  * 
  * APIs gratuites intégrées:
- * - Prix carburant (data.gouv.fr)
+ * - Prix carburant (data.economie.gouv.fr)
  * - Météo (Open-Meteo)
- * - Entreprises (API SIRENE)
+ * - Entreprises (recherche-entreprises.api.gouv.fr)
  * - Adresses (API Adresse gouv)
- * - Trafic (TomTom / estimation)
+ * - Geo communes (geo.api.gouv.fr)
+ * 
+ * Dernière vérification: 28/02/2026
  */
 
 const axios = require('axios');
@@ -20,7 +22,7 @@ class ExternalAPIs {
       fuel: 'https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records',
       weather: 'https://api.open-meteo.com/v1/forecast',
       address: 'https://api-adresse.data.gouv.fr/search',
-      sirene: 'https://api.insee.fr/entreprises/sirene/V3.11/siret',
+      sirene: 'https://recherche-entreprises.api.gouv.fr/search',
       geo: 'https://geo.api.gouv.fr'
     };
   }
@@ -57,43 +59,51 @@ class ExternalAPIs {
       try {
         const params = {
           limit: 100,
-          select: 'id,adresse,ville,cp,prix_maj,prix_nom,prix_valeur',
-          where: "prix_nom='Gazole'"
+          select: 'id,adresse,ville,cp,gazole_prix,gazole_maj,e10_prix,sp98_prix,geom'
         };
 
         if (department) {
-          params.where += ` AND cp LIKE '${department}%'`;
+          params.where = `cp LIKE '${department}%' AND gazole_prix IS NOT NULL`;
+        } else {
+          params.where = 'gazole_prix IS NOT NULL';
         }
 
         const response = await axios.get(this.endpoints.fuel, { params, timeout: 5000 });
         
         const prices = response.data.results || [];
         
-        // Calculer les statistiques
-        const values = prices.map(p => p.prix_valeur / 1000).filter(v => v > 0);
+        // Calculer les statistiques diesel
+        const dieselValues = prices.map(p => p.gazole_prix).filter(v => v && v > 0);
+        const e10Values = prices.map(p => p.e10_prix).filter(v => v && v > 0);
         
+        const calcStats = (values) => ({
+          min: values.length ? Math.min(...values) : null,
+          max: values.length ? Math.max(...values) : null,
+          avg: values.length ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 1000) / 1000 : null,
+          median: values.length ? this.median(values) : null
+        });
+
         return {
-          count: values.length,
-          diesel: {
-            min: Math.min(...values),
-            max: Math.max(...values),
-            avg: values.reduce((a, b) => a + b, 0) / values.length,
-            median: this.median(values)
-          },
+          count: dieselValues.length,
+          diesel: calcStats(dieselValues),
+          e10: calcStats(e10Values),
           stations: prices.slice(0, 10).map(p => ({
             address: p.adresse,
             city: p.ville,
             postalCode: p.cp,
-            price: p.prix_valeur / 1000,
-            updatedAt: p.prix_maj
+            diesel: p.gazole_prix,
+            e10: p.e10_prix,
+            sp98: p.sp98_prix,
+            updatedAt: p.gazole_maj,
+            coordinates: p.geom ? { lat: p.geom.lat, lng: p.geom.lon } : null
           })),
           fetchedAt: new Date().toISOString()
         };
       } catch (error) {
         console.error('Erreur API carburant:', error.message);
-        // Valeur par défaut
         return {
-          diesel: { avg: 1.85, min: 1.75, max: 1.95 },
+          diesel: { avg: 1.75, min: 1.65, max: 1.85 },
+          e10: { avg: 1.75, min: 1.65, max: 1.85 },
           error: error.message,
           fetchedAt: new Date().toISOString()
         };
@@ -226,45 +236,55 @@ class ExternalAPIs {
   async verifySiret(siret) {
     return this.cached(`siret_${siret}`, async () => {
       try {
-        // API SIRENE nécessite une clé - on utilise une alternative
+        // Utilise l'API Recherche Entreprises (active et gratuite)
         const response = await axios.get(
-          `https://entreprise.data.gouv.fr/api/sirene/v3/etablissements/${siret}`,
-          { timeout: 5000 }
+          this.endpoints.sirene,
+          { 
+            params: { q: siret, per_page: 1 },
+            timeout: 5000 
+          }
         );
 
-        const data = response.data.etablissement;
+        const company = response.data.results?.[0];
+        
+        if (!company || (company.siege?.siret !== siret && company.siren !== siret.substring(0, 9))) {
+          return { valid: false, siret, error: 'SIRET non trouvé' };
+        }
+
+        const siege = company.siege || {};
         
         return {
           valid: true,
-          siret: data.siret,
-          siren: data.siren,
+          siret: siege.siret || siret,
+          siren: company.siren,
           company: {
-            name: data.unite_legale?.denomination || data.denomination_usuelle,
-            legalForm: data.unite_legale?.categorie_juridique,
-            creationDate: data.date_creation,
-            activity: data.activite_principale,
-            activityLabel: data.libelle_activite_principale
+            name: company.nom_complet || company.nom_raison_sociale,
+            legalForm: company.nature_juridique,
+            creationDate: company.date_creation,
+            activity: company.activite_principale,
+            activityLabel: company.libelle_activite_principale,
+            category: company.categorie_entreprise
           },
           address: {
-            street: `${data.numero_voie || ''} ${data.type_voie || ''} ${data.libelle_voie || ''}`.trim(),
-            postalCode: data.code_postal,
-            city: data.libelle_commune,
+            street: siege.adresse || '',
+            postalCode: siege.code_postal,
+            city: siege.libelle_commune,
             country: 'France'
           },
           status: {
-            active: data.etat_administratif === 'A',
-            employees: data.tranche_effectifs
+            active: company.etat_administratif === 'A',
+            employees: company.tranche_effectif_salarie
           },
           fetchedAt: new Date().toISOString()
         };
       } catch (error) {
         if (error.response?.status === 404) {
-          return { valid: false, error: 'SIRET non trouvé' };
+          return { valid: false, siret, error: 'SIRET non trouvé' };
         }
         console.error('Erreur API SIRENE:', error.message);
-        return { valid: null, error: error.message };
+        return { valid: null, siret, error: error.message };
       }
-    }, 24 * 60 * 60 * 1000); // Cache 24h pour les données entreprise
+    }, 24 * 60 * 60 * 1000); // Cache 24h
   }
 
   /**
@@ -275,29 +295,32 @@ class ExternalAPIs {
       const params = {
         q: query,
         per_page: options.limit || 10,
-        page: options.page || 1
+        page: options.page || 1,
+        etat_administratif: 'A'
       };
 
       // Filtrer par code NAF transport si spécifié
       if (options.transportOnly) {
-        params.activite_principale = '49.41A,49.41B,49.41C,52.29A,52.29B';
+        params.activite_principale = '49.41A,49.41B,49.41C,49.42Z,52.29A,52.29B';
       }
 
       const response = await axios.get(
-        'https://entreprise.data.gouv.fr/api/sirene/v3/etablissements',
+        this.endpoints.sirene,
         { params, timeout: 5000 }
       );
 
       return {
-        total: response.data.total_results,
-        companies: response.data.etablissements?.map(e => ({
-          siret: e.siret,
-          name: e.unite_legale?.denomination || e.denomination_usuelle,
-          activity: e.libelle_activite_principale,
-          city: e.libelle_commune,
-          postalCode: e.code_postal,
-          active: e.etat_administratif === 'A'
-        })) || [],
+        total: response.data.total_results || 0,
+        companies: (response.data.results || []).map(c => ({
+          siret: c.siege?.siret,
+          siren: c.siren,
+          name: c.nom_complet || c.nom_raison_sociale,
+          activity: c.libelle_activite_principale,
+          city: c.siege?.libelle_commune,
+          postalCode: c.siege?.code_postal,
+          active: c.etat_administratif === 'A',
+          employees: c.tranche_effectif_salarie
+        })),
         page: options.page || 1
       };
     } catch (error) {

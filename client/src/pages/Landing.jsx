@@ -5,7 +5,7 @@ export default function Landing() {
       <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-md border-b border-gray-100 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2"><div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center text-white font-bold">F</div><span className="text-xl font-bold text-gray-900">FRETNOW</span></div>
-          <div className="flex items-center gap-3"><Link to="/login" className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2">Connexion</Link><Link to="/register" className="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-5 py-2.5 rounded-lg">Inscription gratuite</Link></div>
+          <div className="flex items-center gap-3"><Link to="/blog" className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2 hidden sm:block">Blog</Link><Link to="/login" className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2">Connexion</Link><Link to="/register" className="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-5 py-2.5 rounded-lg">Inscription gratuite</Link></div>
         </div>
       </nav>
       <section className="pt-32 pb-20 px-4">
@@ -30,8 +30,8 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">4 verticales, une seule plateforme</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[{i:'🚛',t:'Fret lourd',d:'Lots complets et partiels, retours optimisés.'},{i:'📦',t:'Messagerie',d:'Colis et palettes, 24-72h.'},{i:'⚡',t:'Express',d:'J+1 garanti, SLA et pénalités.'},{i:'🏙️',t:'Dernier km',d:'Livraison urbaine e-commerce.'}].map((f,i)=>(
-              <div key={i} className="p-6 bg-white border border-gray-200 rounded-2xl hover:border-blue-200 hover:shadow-lg transition-all"><div className="text-4xl mb-4">{f.i}</div><h3 className="text-lg font-bold text-gray-900 mb-2">{f.t}</h3><p className="text-sm text-gray-500">{f.d}</p></div>
+            {[{i:'🚛',t:'Fret lourd',d:'Lots complets et partiels, retours optimisés.',s:'fret-lourd'},{i:'📦',t:'Messagerie',d:'Colis et palettes, 24-72h.',s:'messagerie'},{i:'⚡',t:'Express',d:'J+1 garanti, SLA et pénalités.',s:'express'},{i:'🏙️',t:'Dernier km',d:'Livraison urbaine e-commerce.',s:'dernier-km'}].map((f,i)=>(
+              <Link to={`/blog/${f.s}`} key={i} className="p-6 bg-white border border-gray-200 rounded-2xl hover:border-blue-200 hover:shadow-lg transition-all group"><div className="text-4xl mb-4">{f.i}</div><h3 className="text-lg font-bold text-gray-900 mb-2">{f.t}</h3><p className="text-sm text-gray-500 mb-3">{f.d}</p><span className="text-blue-600 text-sm font-medium group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">Découvrir comment NOVA optimise →</span></Link>
             ))}
           </div>
         </div>
@@ -52,7 +52,7 @@ export default function Landing() {
         <p className="text-gray-500 mb-8">Inscription gratuite. Première mission en 5 minutes.</p>
         <Link to="/register" className="inline-flex px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-lg">Commencer maintenant →</Link>
       </section>
-      <footer className="border-t border-gray-200 py-8 px-4"><div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500"><span>© 2026 FRETNOW AGI</span><div className="flex gap-6"><a href="#">CGV</a><a href="#">Mentions légales</a><a href="#">Contact</a></div></div></footer>
+      <footer className="border-t border-gray-200 py-8 px-4"><div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500"><span>© 2026 FRETNOW AGI — Propulsé par NOVA 🤖</span><div className="flex gap-6"><Link to="/blog">Blog</Link><a href="#">CGV</a><a href="#">Mentions légales</a><Link to="/contact">Contact</Link></div></div></footer>
     </div>
   );
 }

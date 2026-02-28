@@ -66,6 +66,7 @@ const monitoringRoutes = require('./routes/monitoring');
 const gdprRoutes = require('./routes/gdpr');
 const mobilicRoutes = require('./routes/mobilic');
 const messagerieRoutes = require('./routes/messagerie');
+const autocompleteRoutes = require('./routes/autocomplete');
 
 app.use('/api', publicRoutes);
 app.use('/api/auth', authRoutes);
@@ -87,12 +88,13 @@ app.use('/api/monitoring', monitoringRoutes);
 app.use('/api/gdpr', gdprRoutes);
 app.use('/api/mobilic', mobilicRoutes);
 app.use('/api/messagerie', messagerieRoutes);
+app.use('/api/autocomplete', autocompleteRoutes);
 
 // ═══ API DOCS ═══
 app.get('/api', (req, res) => {
   res.json({
     name: 'FRETNOW AGI API',
-    version: '7.3.0',
+    version: '7.4.0',
     status: 'running',
     endpoints: {
       auth: { register: 'POST /api/auth/register', login: 'POST /api/auth/login', me: 'GET /api/auth/me', refresh: 'POST /api/auth/refresh', logout: 'POST /api/auth/logout', password: 'PUT /api/auth/password', forgotPassword: 'POST /api/auth/forgot-password', resetPassword: 'POST /api/auth/reset-password' },
@@ -144,7 +146,7 @@ app.use((err, req, res, next) => {
 app.listen(env.PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════╗
-║  🚛 FRETNOW AGI API v7.3.0                       ║
+║  🚛 FRETNOW AGI API v7.4.0                       ║
 ║  Mode: ${env.NODE_ENV.padEnd(42)}║
 ║  Port: ${String(env.PORT).padEnd(42)}║
 ║  DB: ${(env.DATABASE_URL ? '✅ Connected' : '❌ Missing').padEnd(44)}║

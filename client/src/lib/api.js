@@ -46,6 +46,8 @@ export const api = {
   register: (d) => request('/auth/register', { method: 'POST', body: JSON.stringify(d) }),
   me: () => request('/auth/me'),
   updateProfile: (d) => json(request('/auth/profile', { method: 'PUT', body: JSON.stringify(d) })),
+  forgotPassword: (email) => json(request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) })),
+  resetPassword: (token, email, newPassword) => json(request('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, email, newPassword }) })),
 
   getMissions: (params = '') => json(request(`/missions${params ? '?' + params : ''}`)),
   getMission: (id) => json(request(`/missions/${id}`)),

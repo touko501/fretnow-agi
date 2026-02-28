@@ -14,7 +14,7 @@ router.get('/health', async (req, res) => {
       status: 'healthy',
       uptime: Math.floor((Date.now() - startTime) / 1000),
       timestamp: new Date().toISOString(),
-      version: '6.1.0',
+      version: '7.4.0',
       database: 'connected',
     });
   } catch (err) {
@@ -64,7 +64,7 @@ router.get('/metrics', authenticate, isAdmin, async (req, res) => {
 router.get('/status', (req, res) => {
   res.json({
     api: 'operational',
-    version: '6.1.0',
+    version: '7.4.0',
     environment: process.env.NODE_ENV || 'development',
     uptime: Math.floor((Date.now() - startTime) / 1000),
     agents: {
