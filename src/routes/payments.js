@@ -58,9 +58,12 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       const payment = await prisma.payment.findFirst({ where: { stripePaymentId: pi.id } });
       if (payment) {
         await prisma.payment.update({ where: { id: payment.id }, data: { status: 'COMPLETED', paidAt: new Date() } });
+        // SECURITY: use transaction to prevent race condition on invoice numbers
         const year = new Date().getFullYear();
-        const count = await prisma.invoice.count({ where: { createdAt: { gte: new Date(`${year}-01-01`) } } });
-        const invoiceNumber = `FN-${year}-${String(count + 1).padStart(4, '0')}`;
+        const invoiceNumber = await prisma.$transaction(async (tx) => {
+          const count = await tx.invoice.count({ where: { createdAt: { gte: new Date(`${year}-01-01`) } } });
+          return `FN-${year}-${String(count + 1).padStart(4, '0')}`;
+        });
         const mission = await prisma.mission.findUnique({
           where: { id: payment.missionId },
           include: { client: { include: { company: true } } },

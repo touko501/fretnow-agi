@@ -62,8 +62,14 @@ class ExternalAPIs {
           select: 'id,adresse,ville,cp,gazole_prix,gazole_maj,e10_prix,sp98_prix,geom'
         };
 
+        // SECURITY: sanitize department to prevent SQL injection (only 2-3 digit codes)
         if (department) {
-          params.where = `cp LIKE '${department}%' AND gazole_prix IS NOT NULL`;
+          const safeDept = String(department).replace(/[^0-9]/g, '').substring(0, 3);
+          if (safeDept.length >= 2) {
+            params.where = `cp LIKE '${safeDept}%' AND gazole_prix IS NOT NULL`;
+          } else {
+            params.where = 'gazole_prix IS NOT NULL';
+          }
         } else {
           params.where = 'gazole_prix IS NOT NULL';
         }

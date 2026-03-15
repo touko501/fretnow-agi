@@ -206,9 +206,13 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
       { expiresIn: '1h' }
     );
 
-    // Log le lien (en production: envoyer par email)
-    const resetLink = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}&email=${encodeURIComponent(email)}`;
-    console.log(`\n🔑 Password reset for ${email}: ${resetLink}\n`);
+    // Construire le lien de reset (envoyé par email, JAMAIS loggé)
+    const clientUrl = process.env.CLIENT_URL || `${req.protocol}://${req.get('host')}`;
+    const resetLink = `${clientUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+    // SECURITY: ne JAMAIS logger le token de reset en production
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔑 [DEV ONLY] Reset link for ${email} generated`);
+    }
 
     // Audit
     await prisma.auditLog.create({
