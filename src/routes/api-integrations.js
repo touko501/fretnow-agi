@@ -21,17 +21,16 @@ const { authenticate } = require('../middleware/auth');
 const { isAdmin, isChargeur, isTransporteur, isVerified } = require('../middleware/roles');
 
 // Import services
-const RoutingService = require('../../services/routing');
-const PricingEngine = require('../../services/pricing-engine');
-const MatchingEngine = require('../../services/matching-engine');
-const ZFEComplianceService = require('../../services/zfe-compliance');
-const CarbonCalculator = require('../../services/carbon-calculator');
+const routingService = require('../../services/routing'); // singleton
+const { PricingEngine } = require('../../services/pricing-engine');
+const { MatchingEngine } = require('../../services/matching-engine');
+const { ZFEComplianceService } = require('../../services/zfe-compliance');
+const { CarbonCalculator } = require('../../services/carbon-calculator');
 const GPSTrackingService = require('../../services/gps-tracking');
 const StripeConnectService = require('../../services/stripe-connect');
 
 // Initialize services
-const routingService = new RoutingService();
-const pricingEngine = new PricingEngine();
+const pricingEngine = new PricingEngine(prisma);
 const matchingEngine = new MatchingEngine(prisma);
 const zfeService = new ZFEComplianceService();
 const carbonService = new CarbonCalculator();

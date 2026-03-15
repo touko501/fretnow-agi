@@ -313,7 +313,9 @@ class ZFEComplianceService {
   getCritAirFromVehicle(euroNorm, fuelType, registrationYear = null) {
     // Normaliser les entrées
     const normalizedFuel = fuelType.toLowerCase().trim();
-    const key = `${euroNorm}_${normalizedFuel}`;
+    // Normaliser euroNorm: accepte 'EURO6', 'Euro6', 'euro6', 6, '6'
+    const normalizedEuro = String(euroNorm).replace(/^euro/i, '').trim();
+    const key = `${normalizedEuro}_${normalizedFuel}`;
 
     const critair = CRITAIR_MAPPING[key];
 

@@ -127,12 +127,8 @@ class PricingEngine {
    * @param {Object} prisma - Prisma client instance
    * @param {Object} options - Configuration options
    */
-  constructor(prisma, options = {}) {
-    if (!prisma) {
-      throw new Error('Prisma client is required');
-    }
-
-    this.prisma = prisma;
+  constructor(prisma = null, options = {}) {
+    this.prisma = prisma; // null = standalone mode (no market rate lookups)
     this.baseFuelPrice = options.baseFuelPrice || 1.85; // €/L reference
     this.platformFeeDefault = options.platformFeeDefault || 0.08; // 8% default
     this.minPriceThreshold = options.minPriceThreshold || 50; // €50 minimum

@@ -17,7 +17,18 @@
  * Last updated: 15/03/2026
  */
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+// Lazy init: Stripe crashes without API key, defer to first actual usage
+let _stripe = null;
+function getStripe() {
+  if (!_stripe) {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error('STRIPE_SECRET_KEY non configuré. Voir .env.example');
+    }
+    _stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+  }
+  return _stripe;
+}
+const stripe = new Proxy({}, { get: (_, prop) => getStripe()[prop] });
 
 /**
  * Commission rates by mission type
