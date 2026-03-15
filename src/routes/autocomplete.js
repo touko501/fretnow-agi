@@ -23,11 +23,20 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const { ExternalAPIs } = require('../../services/external-apis');
-const { SmartAutocompleteService } = require('../../services/smart-autocomplete');
+const routing = require('../../services/routing');
 
 // Instances singleton
 const externalAPIs = new ExternalAPIs();
-const smartAutocomplete = new SmartAutocompleteService();
+
+// Adapter: routing.js replaces smart-autocomplete.js (deleted in v8 cleanup)
+const smartAutocomplete = {
+  searchAddress: (q, opts) => routing.autocomplete(q, opts?.limit || 5),
+  reverseGeocode: (lat, lon) => routing.reverseGeocode(lat, lon),
+  searchCompany: (q, opts) => externalAPIs.searchCompany ? externalAPIs.searchCompany(q, opts) : Promise.resolve({ results: [] }),
+  verifySiret: (siret) => externalAPIs.verifySiret ? externalAPIs.verifySiret(siret) : Promise.resolve({ valid: null }),
+  searchTransportCompanies: (opts) => externalAPIs.searchTransportCompanies ? externalAPIs.searchTransportCompanies(opts) : Promise.resolve({ total: 0, companies: [] }),
+  searchCity: (q, opts) => routing.geocode(q).then(r => ({ results: Array.isArray(r) ? r : [r].filter(Boolean) })),
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 📍 ADRESSES — Autocomplétion (public)

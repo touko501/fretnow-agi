@@ -230,13 +230,11 @@ npm start
 
 ---
 
-## 🔐 Credentials Configurés
+## 🔐 Variables d'Environnement
 
-```env
-TELEGRAM_BOT_TOKEN=8478060760:AAGfvTTSxmec5199Y6Zgx9QzX7F4tI1fNto
-STRIPE_PUBLIC_KEY=pk_test_51QEFZFG2u1ddlbFM...
-STRIPE_SECRET_KEY=sk_test_51QEFZFG2u1ddlbFM...
-```
+⚠️ **SÉCURITÉ** : Ne JAMAIS committer de clés API en clair.
+Voir `.env.example` pour la liste des variables requises.
+Configurer sur Render → Environment Variables.
 
 ---
 

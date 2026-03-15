@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// FRETNOW AGI — API SERVER v6.1
+// FRETNOW AGI — API SERVER v8.0
 // Marketplace Fret Routier B2B · Plateforme Digitale
+// + Routing OSRM · Matching IA · Pricing Dynamique · ZFE · Carbone · GPS · Stripe Connect
 // ═══════════════════════════════════════════════════════════════════════════
 
 const express = require('express');
@@ -67,6 +68,7 @@ const gdprRoutes = require('./routes/gdpr');
 const mobilicRoutes = require('./routes/mobilic');
 const messagerieRoutes = require('./routes/messagerie');
 const autocompleteRoutes = require('./routes/autocomplete');
+const apiIntegrationRoutes = require('./routes/api-integrations');
 
 app.use('/api', publicRoutes);
 app.use('/api/auth', authRoutes);
@@ -89,12 +91,13 @@ app.use('/api/gdpr', gdprRoutes);
 app.use('/api/mobilic', mobilicRoutes);
 app.use('/api/messagerie', messagerieRoutes);
 app.use('/api/autocomplete', autocompleteRoutes);
+app.use('/api/v2', apiIntegrationRoutes);
 
 // ═══ API DOCS ═══
 app.get('/api', (req, res) => {
   res.json({
     name: 'FRETNOW AGI API',
-    version: '7.4.0',
+    version: '8.0.0',
     status: 'running',
     endpoints: {
       auth: { register: 'POST /api/auth/register', login: 'POST /api/auth/login', me: 'GET /api/auth/me', refresh: 'POST /api/auth/refresh', logout: 'POST /api/auth/logout', password: 'PUT /api/auth/password', forgotPassword: 'POST /api/auth/forgot-password', resetPassword: 'POST /api/auth/reset-password' },
@@ -123,8 +126,9 @@ app.use('/api/*', (req, res) => {
 });
 
 // ═══ CONVENIENCE REDIRECTS ═══
-app.get('/app', (req, res) => res.redirect('/app.html'));
-app.get('/dashboard', (req, res) => res.redirect('/app.html'));
+// v8: app.html supprimé, redirige vers le dashboard React
+app.get('/app', (req, res) => res.redirect('/dashboard'));
+// /dashboard est géré par le SPA catch-all ci-dessous
 
 // ═══ SPA CATCH-ALL ═══
 const reactIndex = path.join(__dirname, '../public-react/index.html');
@@ -146,7 +150,7 @@ app.use((err, req, res, next) => {
 app.listen(env.PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════╗
-║  🚛 FRETNOW AGI API v7.4.0                       ║
+║  🚛 FRETNOW AGI API v8.0.0                        ║
 ║  Mode: ${env.NODE_ENV.padEnd(42)}║
 ║  Port: ${String(env.PORT).padEnd(42)}║
 ║  DB: ${(env.DATABASE_URL ? '✅ Connected' : '❌ Missing').padEnd(44)}║
@@ -154,6 +158,7 @@ app.listen(env.PORT, () => {
 ║  Mobilic: ${(process.env.MOBILIC_CLIENT_ID ? '✅ Ready' : '⏳ Awaiting sandbox access').padEnd(39)}║
 ║  AI: ✅ 10 Agents (incl. Compliance)            ║
 ║  Routes: Fret + Messagerie + Express + Mobilic  ║
+║  v8: Routing·Matching·Pricing·ZFE·Carbone·GPS  ║
 ╚═══════════════════════════════════════════════════╝
   `);
 });

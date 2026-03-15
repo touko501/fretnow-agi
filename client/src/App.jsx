@@ -18,8 +18,6 @@ import Vehicles from './pages/Vehicles';
 import Notifications from './pages/Notifications';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import Blog from './pages/Blog';
-
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Chargement...</div>;
@@ -38,9 +36,6 @@ export default function App() {
       <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
       <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" /> : <ForgotPassword />} />
       <Route path="/reset-password" element={user ? <Navigate to="/dashboard" /> : <ResetPassword />} />
-      <Route path="/blog" element={<Blog />} />
-      <Route path="/blog/:slug" element={<Blog />} />
-
       {/* Protected */}
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/missions" element={<ProtectedRoute><Missions /></ProtectedRoute>} />

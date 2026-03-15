@@ -1,27 +1,30 @@
 /**
- * FRETNOW AI Service — Bridge entre agents IA et base de données Prisma
- * Connecte PricingAgent, MatcherAgent, RiskAgent au serveur production
+ * FRETNOW AI Service v8.0 — Bridge entre services IA v8 et base de données Prisma
+ * Connecte PricingEngine, MatchingEngine, RiskAgent au serveur production
+ *
+ * Migration v8: PricingAgent → PricingEngine, MatcherAgent → MatchingEngine
  */
 
 const prisma = require('../config/database');
-const { PricingAgent } = require('../../agents/pricing');
-const { MatcherAgent } = require('../../agents/matcher');
+const { PricingEngine } = require('../../services/pricing-engine');
+const { MatchingEngine } = require('../../services/matching-engine');
 const { RiskAgent } = require('../../agents/risk');
 
-// Instancier les agents
-const pricingAgent = new PricingAgent();
-const matcherAgent = new MatcherAgent();
+// Instancier les services v8
+const pricingEngine = new PricingEngine();
+const matchingEngine = new MatchingEngine(prisma);
 const riskAgent = new RiskAgent();
 
 // Initialiser
 let initialized = false;
 async function initAgents() {
   if (initialized) return;
-  await pricingAgent.init();
-  await matcherAgent.init();
-  await riskAgent.init();
+  // RiskAgent still uses legacy init pattern
+  if (typeof riskAgent.init === 'function') {
+    await riskAgent.init();
+  }
   initialized = true;
-  console.log('🤖 AI Agents initialisés (Pricing, Matcher, Risk)');
+  console.log('🤖 AI Services v8 initialisés (PricingEngine, MatchingEngine, Risk)');
 }
 
 /**
@@ -29,81 +32,37 @@ async function initAgents() {
  */
 async function estimatePrice(missionId) {
   await initAgents();
-  
+
   const mission = await prisma.mission.findUnique({
     where: { id: missionId },
     include: { client: { include: { company: true } } }
   });
   if (!mission) throw new Error('Mission non trouvée');
 
-  // Récupérer les indices CNR récents
-  const cnrIndices = await prisma.cnrIndex.findMany({
-    orderBy: { month: 'desc' }, take: 1
-  });
-
-  // Construire l'objet mission pour l'agent
-  const missionData = {
-    id: mission.id,
-    pickup: { city: mission.pickupCity, postalCode: mission.pickupPostalCode, lat: mission.pickupLat, lon: mission.pickupLon },
-    delivery: { city: mission.deliveryCity, postalCode: mission.deliveryPostalCode, lat: mission.deliveryLat, lon: mission.deliveryLon },
-    distance: mission.distanceKm || 0,
-    weight: mission.weightKg || 0,
-    volume: mission.volumeM3 || 0,
-    pallets: mission.palletCount || 0,
-    vehicleType: mapVehicleType(mission.vehicleTypeRequired),
-    isADR: mission.isADR,
-    requiresTemp: mission.requiresTemp,
-    isFragile: mission.isFragile,
-    pickupDate: mission.pickupDateRequested,
-    deliveryDate: mission.deliveryDateRequested,
-  };
-
-  // Récupérer les prix historiques pour des routes similaires
-  const historicalPrices = await prisma.mission.findMany({
-    where: {
-      status: { in: ['COMPLETED', 'DELIVERED'] },
-      pickupPostalCode: { startsWith: mission.pickupPostalCode?.substring(0, 2) },
-      deliveryPostalCode: { startsWith: mission.deliveryPostalCode?.substring(0, 2) },
-      finalPriceCents: { not: null },
-      deletedAt: null,
-    },
-    select: { finalPriceCents: true, distanceKm: true, weightKg: true, vehicleTypeRequired: true },
-    orderBy: { completedAt: 'desc' },
-    take: 20,
-  });
-
-  const marketConditions = {
-    cnr: cnrIndices[0] || null,
-    historicalPrices: historicalPrices.map(p => ({
-      price: p.finalPriceCents / 100,
-      distance: p.distanceKm,
-      pricePerKm: p.distanceKm > 0 ? (p.finalPriceCents / 100) / p.distanceKm : 0,
-    })),
-    demand: await getDemandFactor(mission.pickupPostalCode),
-  };
-
-  const state = { pendingMissions: [missionData], marketConditions };
-
   try {
-    const result = await pricingAgent.execute(state);
-    const quote = missionData.price || missionData.priceBreakdown;
+    // Use new PricingEngine v8
+    const result = await pricingEngine.calculatePrice(mission, {
+      includeBreakdown: true,
+      includeMarketComparison: true,
+    });
 
     // Sauvegarder l'estimation
-    if (missionData.price) {
+    if (result.totalPrice) {
       await prisma.mission.update({
         where: { id: missionId },
-        data: { estimatedPriceCents: Math.round(missionData.price * 100) }
+        data: { estimatedPriceCents: Math.round(result.totalPrice * 100) }
       });
     }
 
     return {
-      estimatedPrice: missionData.price,
-      breakdown: missionData.priceBreakdown,
+      estimatedPrice: result.totalPrice,
+      breakdown: result.breakdown || {},
       confidence: result.confidence || 'medium',
-      basedOn: historicalPrices.length + ' missions similaires',
+      adjustments: result.adjustments || {},
+      marketComparison: result.marketComparison || null,
     };
   } catch (err) {
-    console.error('PricingAgent error:', err.message);
+    console.error('PricingEngine error:', err.message);
     // Fallback: prix simple basé sur distance
     const fallbackPrice = calculateFallbackPrice(mission);
     return { estimatedPrice: fallbackPrice, breakdown: { method: 'fallback' }, confidence: 'low' };
@@ -121,100 +80,42 @@ async function findMatches(missionId) {
   });
   if (!mission) throw new Error('Mission non trouvée');
 
-  // Récupérer les transporteurs actifs avec véhicules compatibles
-  const transporteurs = await prisma.user.findMany({
-    where: {
-      role: 'TRANSPORTEUR',
-      status: 'ACTIVE',
-      deletedAt: null,
-      company: { isVerified: true },
-    },
-    include: {
-      company: {
-        include: {
-          vehicles: {
-            where: { isActive: true },
-            select: { id: true, type: true, capacityKg: true, volumeM3: true, palletSpots: true, hasTailLift: true, hasADR: true, tempMin: true, tempMax: true },
-          },
-          drivers: { where: { isActive: true }, select: { id: true, adrCertified: true } },
-        }
-      },
-      ratingsReceived: { select: { score: true } },
-      bids: {
-        where: { status: 'ACCEPTED' },
-        select: { id: true },
-        take: 50,
-      },
-    },
-  });
-
-  // Construire les objets pour le MatcherAgent
-  const missionData = {
-    id: mission.id,
-    status: 'pending',
-    pickup: { city: mission.pickupCity, postalCode: mission.pickupPostalCode, lat: mission.pickupLat, lon: mission.pickupLon },
-    delivery: { city: mission.deliveryCity, postalCode: mission.deliveryPostalCode, lat: mission.deliveryLat, lon: mission.deliveryLon },
-    distance: mission.distanceKm || 0,
-    weight: mission.weightKg || 0,
-    volume: mission.volumeM3 || 0,
-    pallets: mission.palletCount || 0,
-    vehicleType: mapVehicleType(mission.vehicleTypeRequired),
-    isADR: mission.isADR,
-    requiresTemp: mission.requiresTemp,
-    pickupDate: mission.pickupDateRequested,
-  };
-
-  const availableTransporters = transporteurs.map(t => ({
-    id: t.id,
-    companyId: t.companyId,
-    status: 'active',
-    company: t.company?.name,
-    city: t.company?.city,
-    lat: t.company?.lat,
-    lon: t.company?.lon,
-    vehicles: (t.company?.vehicles || []).map(v => ({
-      type: v.type,
-      capacity: v.capacityKg,
-      volume: v.volumeM3,
-      pallets: v.palletSpots,
-      hasADR: v.hasADR,
-      hasTailLift: v.hasTailLift,
-    })),
-    hasADRDriver: (t.company?.drivers || []).some(d => d.adrCertified),
-    rating: t.ratingsReceived.length > 0
-      ? t.ratingsReceived.reduce((a, r) => a + r.score, 0) / t.ratingsReceived.length
-      : null,
-    completedMissions: t.bids.length,
-  }));
-
-  const state = {
-    pendingMissions: [missionData],
-    activeLeads: availableTransporters,
-  };
-
   try {
-    const result = await matcherAgent.execute(state);
+    // Use new MatchingEngine v8
+    const result = await matchingEngine.findMatches(mission, {
+      limit: 10,
+      includeReturnTrips: true,
+    });
+
     return {
-      matches: (result.topMatches || []).slice(0, 10).map(m => ({
-        transporteurId: m.transporter?.id,
-        company: m.transporter?.company,
-        score: Math.round(m.score * 100),
-        factors: m.factors,
-        estimatedAcceptance: m.estimatedAcceptance,
+      matches: (result.matches || []).slice(0, 10).map(m => ({
+        transporteurId: m.carrierId || m.transporter?.id,
+        company: m.companyName || m.transporter?.company,
+        score: Math.round((m.score || 0) * 100),
+        factors: m.factors || {},
+        isReturnTrip: m.isReturnTrip || false,
       })),
-      totalCandidates: availableTransporters.length,
-      summary: result.summary,
+      totalCandidates: result.totalCandidates || 0,
+      summary: result.summary || '',
     };
   } catch (err) {
-    console.error('MatcherAgent error:', err.message);
+    console.error('MatchingEngine error:', err.message);
     // Fallback: retourner les transporteurs triés par note
+    const transporteurs = await prisma.user.findMany({
+      where: { role: 'TRANSPORTEUR', status: 'ACTIVE', deletedAt: null },
+      include: { ratingsReceived: { select: { score: true } } },
+      take: 10,
+    });
     return {
-      matches: availableTransporters
-        .filter(t => t.rating)
-        .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-        .slice(0, 10)
-        .map(t => ({ transporteurId: t.id, company: t.company, score: Math.round((t.rating || 3) * 20), factors: { method: 'fallback-rating' } })),
-      totalCandidates: availableTransporters.length,
+      matches: transporteurs
+        .map(t => {
+          const avgRating = t.ratingsReceived.length > 0
+            ? t.ratingsReceived.reduce((a, r) => a + r.score, 0) / t.ratingsReceived.length
+            : 3;
+          return { transporteurId: t.id, score: Math.round(avgRating * 20), factors: { method: 'fallback-rating' } };
+        })
+        .sort((a, b) => b.score - a.score),
+      totalCandidates: transporteurs.length,
       summary: 'Fallback: tri par note',
     };
   }
@@ -285,24 +186,15 @@ function getAgentsStatus() {
   return {
     initialized,
     agents: [
-      { name: 'PRICING', status: initialized ? 'active' : 'idle', stats: pricingAgent.stats },
-      { name: 'MATCHER', status: initialized ? 'active' : 'idle', stats: matcherAgent.stats },
-      { name: 'RISK', status: initialized ? 'active' : 'idle', stats: riskAgent.stats },
+      { name: 'PRICING_ENGINE_V8', status: initialized ? 'active' : 'idle', stats: pricingEngine.getStats ? pricingEngine.getStats() : {} },
+      { name: 'MATCHING_ENGINE_V8', status: initialized ? 'active' : 'idle', stats: matchingEngine.getStats ? matchingEngine.getStats() : {} },
+      { name: 'RISK', status: initialized ? 'active' : 'idle', stats: riskAgent.stats || {} },
     ],
     timestamp: new Date().toISOString(),
   };
 }
 
 // === HELPERS ===
-
-function mapVehicleType(prismaType) {
-  if (!prismaType) return 'PL';
-  if (prismaType.startsWith('FOURGON')) return 'VUL';
-  if (prismaType.startsWith('PORTEUR')) return 'PL';
-  if (prismaType.startsWith('SEMI_FRIGO')) return 'FRIGO';
-  if (prismaType.startsWith('SEMI')) return 'SPL';
-  return 'PL';
-}
 
 function calculateFallbackPrice(mission) {
   const distance = mission.distanceKm || 100;
@@ -311,21 +203,6 @@ function calculateFallbackPrice(mission) {
   const adrSurcharge = mission.isADR ? 1.30 : 1.0;
   const frigoSurcharge = mission.requiresTemp ? 1.25 : 1.0;
   return Math.round(distance * baseRate * weightSurcharge * adrSurcharge * frigoSurcharge);
-}
-
-async function getDemandFactor(postalCode) {
-  if (!postalCode) return 1.0;
-  const dept = postalCode.substring(0, 2);
-  const recentMissions = await prisma.mission.count({
-    where: {
-      pickupPostalCode: { startsWith: dept },
-      status: { in: ['PUBLISHED', 'BIDDING'] },
-      deletedAt: null,
-      createdAt: { gte: new Date(Date.now() - 7 * 24 * 3600 * 1000) },
-    }
-  });
-  // Normaliser: >10 missions/semaine = forte demande
-  return Math.min(1.5, Math.max(0.8, 1.0 + (recentMissions - 5) * 0.05));
 }
 
 module.exports = {
