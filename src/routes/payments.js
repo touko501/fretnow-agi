@@ -69,10 +69,22 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           include: { client: { include: { company: true } } },
         });
         if (mission?.client?.companyId) {
+          // Find FRETNOW platform company or use receiver's company as sender
+          let fretnowCompanyId = null;
+          const platformCompany = await prisma.company.findFirst({ where: { type: 'PLATEFORME' } });
+          if (platformCompany) {
+            fretnowCompanyId = platformCompany.id;
+          } else {
+            // Auto-create FRETNOW platform company if missing
+            const created = await prisma.company.create({
+              data: { name: 'FRETNOW SAS', type: 'PLATEFORME', siren: '000000000', siret: '00000000000000', active: true },
+            });
+            fretnowCompanyId = created.id;
+          }
           await prisma.invoice.create({
             data: {
               number: invoiceNumber, missionId: payment.missionId,
-              senderId: 'co-fretnow', receiverId: mission.client.companyId,
+              senderId: fretnowCompanyId, receiverId: mission.client.companyId,
               amountHtCents: payment.amountHtCents, tvaCents: payment.tvaCents,
               amountTtcCents: payment.amountCents, status: 'PAID',
               issuedAt: new Date(), paidAt: new Date(),

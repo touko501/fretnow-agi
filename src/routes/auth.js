@@ -36,7 +36,7 @@ router.post('/register', authLimiter, validate(schemas.registerSchema), async (r
       }
 
       const user = await tx.user.create({
-        data: { email, passwordHash, firstName, lastName, phone, role, status: 'PENDING_VERIFICATION', companyId },
+        data: { email, passwordHash, firstName, lastName, phone, role, status: 'ACTIVE', companyId },
         select: { id: true, email: true, firstName: true, lastName: true, role: true, status: true },
       });
 
@@ -228,7 +228,13 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
       },
     });
 
-    res.json({ message: 'Si cet email existe, un lien de réinitialisation a été envoyé.', resetLink });
+    // En production, envoyer par email uniquement. En dev/bêta, on retourne le lien
+    // pour faciliter les tests (pas de SMTP configuré)
+    const response = { message: 'Si cet email existe, un lien de réinitialisation a été envoyé.' };
+    if (process.env.NODE_ENV !== 'production') {
+      response.resetLink = resetLink; // Dev/Bêta only — remove when SMTP is configured
+    }
+    res.json(response);
   } catch (err) {
     console.error('Forgot password error:', err);
     res.status(500).json({ error: 'Erreur serveur' });

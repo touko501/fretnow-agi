@@ -12,8 +12,10 @@ async function request(path, options = {}) {
         const rr = await fetch(`${BASE}/auth/refresh`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken }) });
         if (rr.ok) {
           const d = await rr.json();
-          localStorage.setItem('fretnow_token', d.token);
-          headers['Authorization'] = `Bearer ${d.token}`;
+          const newToken = d.accessToken || d.token;
+          localStorage.setItem('fretnow_token', newToken);
+          if (d.refreshToken) localStorage.setItem('fretnow_refresh', d.refreshToken);
+          headers['Authorization'] = `Bearer ${newToken}`;
           return fetch(`${BASE}${path}`, { ...options, headers });
         }
       } catch (e) {}

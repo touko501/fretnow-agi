@@ -16,6 +16,7 @@ import Agents from './pages/Agents';
 import Profile from './pages/Profile';
 import Vehicles from './pages/Vehicles';
 import Notifications from './pages/Notifications';
+import MyBids from './pages/MyBids';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 function ProtectedRoute({ children }) {
@@ -50,7 +51,7 @@ export default function App() {
       <Route path="/vehicles" element={<ProtectedRoute><Vehicles /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/my-bids" element={<ProtectedRoute><Missions /></ProtectedRoute>} />
+      <Route path="/my-bids" element={<ProtectedRoute><MyBids /></ProtectedRoute>} />
 
       {/* Catch all */}
       <Route path="*" element={<Navigate to="/" />} />

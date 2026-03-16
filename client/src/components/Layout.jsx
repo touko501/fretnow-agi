@@ -15,6 +15,7 @@ const NAV = {
   TRANSPORTEUR: [
     { path: '/dashboard', icon: '📊', label: 'Tableau de bord' },
     { path: '/missions', icon: '🚛', label: 'Missions' },
+    { path: '/my-bids', icon: '📝', label: 'Mes offres' },
     { path: '/messagerie', icon: '🚀', label: 'Messagerie / Express' },
     { path: '/vehicles', icon: '🚐', label: 'Véhicules' },
     { path: '/mobilic', icon: '⏱️', label: 'Mobilic' },

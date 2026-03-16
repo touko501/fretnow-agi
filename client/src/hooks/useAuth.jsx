@@ -25,17 +25,33 @@ export function AuthProvider({ children }) {
     const res = await api.login(email, password);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur de connexion');
-    localStorage.setItem('fretnow_token', data.token);
+    localStorage.setItem('fretnow_token', data.accessToken || data.token);
     if (data.refreshToken) localStorage.setItem('fretnow_refresh', data.refreshToken);
     setUser(data.user);
     return data;
   };
 
   const register = async (formData) => {
-    const res = await api.register(formData);
+    // Structure the payload: nest company fields if present
+    const { companyName, siren, siret, companyAddress, companyPostalCode, companyCity, ...rest } = formData;
+    const payload = { ...rest };
+    // Strip spaces from phone for backend validation
+    if (payload.phone) payload.phone = payload.phone.replace(/\s/g, '');
+    if (!payload.phone) delete payload.phone;
+    if (siren && siren.length === 9 && companyName) {
+      payload.company = {
+        name: companyName,
+        siren,
+        siret: siret || (siren + '00000'),
+        address: companyAddress || companyName,
+        postalCode: companyPostalCode || '00000',
+        city: companyCity || 'France',
+      };
+    }
+    const res = await api.register(payload);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Erreur d'inscription");
-    localStorage.setItem('fretnow_token', data.token);
+    localStorage.setItem('fretnow_token', data.accessToken || data.token);
     if (data.refreshToken) localStorage.setItem('fretnow_refresh', data.refreshToken);
     setUser(data.user);
     return data;

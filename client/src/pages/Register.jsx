@@ -6,7 +6,7 @@ import CompanyLookup from '../components/CompanyLookup';
 export default function Register() {
   const [searchParams] = useSearchParams();
   const defaultRole = searchParams.get('role') || 'CHARGEUR';
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', phone: '', role: defaultRole, companyName: '', siren: '', siret: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', phone: '', role: defaultRole, companyName: '', siren: '', siret: '', companyAddress: '', companyPostalCode: '', companyCity: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -187,6 +187,7 @@ export default function Register() {
                       companyName: c.companyName || f.companyName,
                       siren: c.siren || f.siren,
                       siret: c.siret || f.siret,
+                      companyAddress: c.address || f.companyAddress,
                     }));
                   }}
                   inputClass={inputClass}
