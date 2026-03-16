@@ -8,6 +8,18 @@ const { authenticate, generateTokens } = require('../middleware/auth');
 const { authLimiter } = require('../config/security');
 const { validate, schemas } = require('../middleware/validate');
 
+// ═══ GET /auth/debug-register-test ═══
+router.get('/debug-register-test', async (req, res) => {
+  try {
+    const count = await prisma.user.count();
+    const auditCount = await prisma.auditLog.count();
+    const notifCount = await prisma.notification.count();
+    res.json({ ok: true, users: count, auditLogs: auditCount, notifications: notifCount });
+  } catch (err) {
+    res.json({ ok: false, error: err.message, code: err.code });
+  }
+});
+
 // ═══ POST /auth/register ═══
 router.post('/register', authLimiter, validate(schemas.registerSchema), async (req, res) => {
   try {
