@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import AddressAutocomplete from '../components/AddressAutocomplete';
 
 const VEHICLE_TYPES = [
   'FOURGON_3T5', 'FOURGON_12M3', 'FOURGON_20M3', 'PORTEUR_7T5', 'PORTEUR_12T', 'PORTEUR_19T',
@@ -197,11 +198,26 @@ export default function CreateMission() {
                 </div>
                 <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#059669' }}>Enlèvement</span>
               </div>
-              <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="mb-3">
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider"
+                  style={{ color: 'var(--fn-text-muted)' }}>
+                  Adresse d'enlèvement <span className="text-red-400">*</span>
+                </label>
+                <AddressAutocomplete
+                  value={form.pickupAddress}
+                  onChange={(v) => u('pickupAddress', v)}
+                  onSelect={(item) => {
+                    u('pickupAddress', item.label || '');
+                    if (item.city) setForm(f => ({ ...f, pickupAddress: item.label || '', pickupCity: item.city, pickupPostalCode: item.postcode || '' }));
+                  }}
+                  placeholder="Tapez une adresse... (ex: 10 rue de la Paix, Paris)"
+                  className="fn-input"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <InputField label="Ville" required placeholder="Paris" value={form.pickupCity} onChange={(e) => u('pickupCity', e.target.value)} />
                 <InputField label="Code postal" placeholder="75001" value={form.pickupPostalCode} onChange={(e) => u('pickupPostalCode', e.target.value)} />
               </div>
-              <InputField label="Adresse" placeholder="123 rue de la Paix" value={form.pickupAddress} onChange={(e) => u('pickupAddress', e.target.value)} />
               <div className="mt-3">
                 <InputField label="Date souhaitée" type="datetime-local" value={form.pickupDateRequested} onChange={(e) => u('pickupDateRequested', e.target.value)} />
               </div>
@@ -224,11 +240,26 @@ export default function CreateMission() {
                 </div>
                 <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#dc2626' }}>Livraison</span>
               </div>
-              <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="mb-3">
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider"
+                  style={{ color: 'var(--fn-text-muted)' }}>
+                  Adresse de livraison <span className="text-red-400">*</span>
+                </label>
+                <AddressAutocomplete
+                  value={form.deliveryAddress}
+                  onChange={(v) => u('deliveryAddress', v)}
+                  onSelect={(item) => {
+                    u('deliveryAddress', item.label || '');
+                    if (item.city) setForm(f => ({ ...f, deliveryAddress: item.label || '', deliveryCity: item.city, deliveryPostalCode: item.postcode || '' }));
+                  }}
+                  placeholder="Tapez une adresse... (ex: 456 avenue des Frères Lumière, Lyon)"
+                  className="fn-input"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <InputField label="Ville" required placeholder="Lyon" value={form.deliveryCity} onChange={(e) => u('deliveryCity', e.target.value)} />
                 <InputField label="Code postal" placeholder="69001" value={form.deliveryPostalCode} onChange={(e) => u('deliveryPostalCode', e.target.value)} />
               </div>
-              <InputField label="Adresse" placeholder="456 avenue des Frères Lumière" value={form.deliveryAddress} onChange={(e) => u('deliveryAddress', e.target.value)} />
             </div>
 
             <div className="flex gap-3 mt-6">

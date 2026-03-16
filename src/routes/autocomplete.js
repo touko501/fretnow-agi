@@ -32,9 +32,9 @@ const externalAPIs = new ExternalAPIs();
 const smartAutocomplete = {
   searchAddress: (q, opts) => routing.autocomplete(q, opts?.limit || 5),
   reverseGeocode: (lat, lon) => routing.reverseGeocode(lat, lon),
-  searchCompany: (q, opts) => externalAPIs.searchCompany ? externalAPIs.searchCompany(q, opts) : Promise.resolve({ results: [] }),
+  searchCompany: (q, opts) => externalAPIs.searchCompanies ? externalAPIs.searchCompanies(q, opts) : Promise.resolve({ results: [] }),
   verifySiret: (siret) => externalAPIs.verifySiret ? externalAPIs.verifySiret(siret) : Promise.resolve({ valid: null }),
-  searchTransportCompanies: (opts) => externalAPIs.searchTransportCompanies ? externalAPIs.searchTransportCompanies(opts) : Promise.resolve({ total: 0, companies: [] }),
+  searchTransportCompanies: (opts) => externalAPIs.searchCompanies ? externalAPIs.searchCompanies('transport', opts) : Promise.resolve({ total: 0, companies: [] }),
   searchCity: (q, opts) => routing.geocode(q).then(r => ({ results: Array.isArray(r) ? r : [r].filter(Boolean) })),
 };
 

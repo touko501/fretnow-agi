@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import CompanyLookup from '../components/CompanyLookup';
 
 export default function Register() {
   const [searchParams] = useSearchParams();
@@ -173,16 +174,25 @@ export default function Register() {
 
               <div className="pt-4 mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                 <p className="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wider">Entreprise</p>
-                <div className="space-y-3">
-                  <input placeholder="Nom de l'entreprise" value={form.companyName} onChange={(e) => update('companyName', e.target.value)}
-                    className={inputClass} style={inputStyle} {...focusHandlers} />
-                  <div className="grid grid-cols-2 gap-3">
-                    <input placeholder="SIREN (9 chiffres)" value={form.siren} onChange={(e) => update('siren', e.target.value)}
-                      className={inputClass} style={inputStyle} {...focusHandlers} />
-                    <input placeholder="SIRET (14 chiffres)" value={form.siret} onChange={(e) => update('siret', e.target.value)}
-                      className={inputClass} style={inputStyle} {...focusHandlers} />
-                  </div>
-                </div>
+                <CompanyLookup
+                  siren={form.siren}
+                  siret={form.siret}
+                  companyName={form.companyName}
+                  onChangeSiren={(v) => update('siren', v)}
+                  onChangeSiret={(v) => update('siret', v)}
+                  onChangeCompanyName={(v) => update('companyName', v)}
+                  onCompanyFound={(c) => {
+                    setForm(f => ({
+                      ...f,
+                      companyName: c.companyName || f.companyName,
+                      siren: c.siren || f.siren,
+                      siret: c.siret || f.siret,
+                    }));
+                  }}
+                  inputClass={inputClass}
+                  inputStyle={inputStyle}
+                  focusHandlers={focusHandlers}
+                />
               </div>
 
               <button type="submit" disabled={loading}
