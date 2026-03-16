@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 
+const TYPE_ICONS = {
+  FOURGON_3T5: '🚐', FOURGON_20M3: '🚐', PORTEUR_7T5: '🚚', PORTEUR_19T: '🚚',
+  SEMI_TAUTLINER: '🚛', SEMI_FRIGO: '❄️', SEMI_BACHE: '🚛',
+};
+
 export default function Vehicles() {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,57 +27,93 @@ export default function Vehicles() {
     } catch (e) { alert(e.message); }
   };
 
-  const inp = "px-3 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500";
   const types = ['FOURGON_3T5', 'FOURGON_20M3', 'PORTEUR_7T5', 'PORTEUR_19T', 'SEMI_TAUTLINER', 'SEMI_FRIGO', 'SEMI_BACHE'];
 
-  if (loading) return <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>;
+  if (loading) {
+    return (
+      <div className="fn-stagger">
+        <div className="flex items-center justify-between mb-6">
+          <div><div className="fn-skeleton h-8 w-32 mb-2 rounded-lg" /><div className="fn-skeleton h-4 w-24 rounded-lg" /></div>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {[...Array(4)].map((_, i) => <div key={i} className="fn-skeleton h-32 rounded-2xl" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div>
+    <div className="fn-animate-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Ma flotte</h1>
-          <p className="text-gray-500 text-sm mt-1">{vehicles.length} véhicule{vehicles.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-[24px] font-extrabold tracking-tight" style={{ color: 'var(--fn-text)' }}>Ma flotte</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--fn-text-secondary)' }}>
+            {vehicles.length} véhicule{vehicles.length !== 1 ? 's' : ''} enregistré{vehicles.length !== 1 ? 's' : ''}
+          </p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-xl text-sm hover:bg-blue-700">+ Ajouter</button>
+        <button onClick={() => setShowForm(!showForm)} className="fn-btn fn-btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Ajouter
+        </button>
       </div>
 
       {showForm && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Nouveau véhicule</h2>
+        <div className="fn-card p-6 mb-6 fn-animate-in">
+          <h2 className="text-[15px] font-bold mb-4" style={{ color: 'var(--fn-text)' }}>Nouveau véhicule</h2>
           <div className="grid sm:grid-cols-2 gap-3 mb-4">
-            <select value={f.type} onChange={e => u('type', e.target.value)} className={inp + " bg-white"}>{types.map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}</select>
-            <input value={f.plate} onChange={e => u('plate', e.target.value)} placeholder="Immatriculation" className={inp} />
-            <input value={f.brand} onChange={e => u('brand', e.target.value)} placeholder="Marque" className={inp} />
-            <input value={f.model} onChange={e => u('model', e.target.value)} placeholder="Modèle" className={inp} />
-            <input type="number" value={f.maxWeightKg} onChange={e => u('maxWeightKg', e.target.value)} placeholder="Charge max (kg)" className={inp} />
-            <input type="number" value={f.maxVolumeM3} onChange={e => u('maxVolumeM3', e.target.value)} placeholder="Volume max (m³)" className={inp} />
+            <select value={f.type} onChange={e => u('type', e.target.value)} className="fn-input">
+              {types.map(t => <option key={t} value={t}>{(TYPE_ICONS[t] || '🚛') + ' ' + t.replace(/_/g, ' ')}</option>)}
+            </select>
+            <input value={f.plate} onChange={e => u('plate', e.target.value)} placeholder="Immatriculation" className="fn-input" />
+            <input value={f.brand} onChange={e => u('brand', e.target.value)} placeholder="Marque" className="fn-input" />
+            <input value={f.model} onChange={e => u('model', e.target.value)} placeholder="Modèle" className="fn-input" />
+            <input type="number" value={f.maxWeightKg} onChange={e => u('maxWeightKg', e.target.value)} placeholder="Charge max (kg)" className="fn-input" />
+            <input type="number" value={f.maxVolumeM3} onChange={e => u('maxVolumeM3', e.target.value)} placeholder="Volume max (m³)" className="fn-input" />
           </div>
-          <button onClick={add} className="px-6 py-2.5 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 text-sm">Enregistrer</button>
+          <button onClick={add}
+            className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-300"
+            style={{ background: 'linear-gradient(135deg, #059669, #10b981)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)' }}>
+            Enregistrer
+          </button>
         </div>
       )}
 
       {vehicles.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <div className="text-5xl mb-4">🚐</div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun véhicule</h3>
-          <p className="text-gray-500 text-sm">Ajoutez votre premier véhicule pour commencer à répondre aux missions.</p>
+        <div className="fn-card text-center py-20 fn-animate-scale">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4"
+            style={{ background: 'rgba(37,99,235,0.06)' }}>
+            <span className="text-4xl">🚐</span>
+          </div>
+          <p className="text-[15px] font-bold mb-1" style={{ color: 'var(--fn-text)' }}>Aucun véhicule</p>
+          <p className="text-sm mb-5" style={{ color: 'var(--fn-text-muted)' }}>Ajoutez votre premier véhicule pour commencer à répondre aux missions.</p>
+          <button onClick={() => setShowForm(true)} className="fn-btn fn-btn-primary">Ajouter un véhicule</button>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 gap-4 fn-stagger">
           {vehicles.map(v => (
-            <div key={v.id} className="bg-white rounded-xl border border-gray-200 p-5">
+            <div key={v.id} className="fn-card fn-card-interactive p-5 group">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-xl">🚛</div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-transform duration-200 group-hover:scale-110"
+                  style={{ background: 'rgba(37,99,235,0.06)' }}>
+                  {TYPE_ICONS[v.type] || '🚛'}
+                </div>
                 <div>
-                  <div className="font-semibold text-gray-900">{v.plate || v.licensePlate}</div>
-                  <div className="text-sm text-gray-500">{(v.type || '').replace(/_/g, ' ')}</div>
+                  <div className="text-[15px] font-bold" style={{ color: 'var(--fn-text)' }}>{v.plate || v.licensePlate}</div>
+                  <div className="text-xs" style={{ color: 'var(--fn-text-muted)' }}>{(v.type || '').replace(/_/g, ' ')}</div>
                 </div>
               </div>
-              <div className="text-sm text-gray-500">
+              <div className="flex items-center gap-3 text-xs font-medium" style={{ color: 'var(--fn-text-secondary)' }}>
                 {v.brand && <span>{v.brand} {v.model}</span>}
-                {v.maxWeightKg && <span> · {v.maxWeightKg}kg</span>}
-                {v.maxVolumeM3 && <span> · {v.maxVolumeM3}m³</span>}
+                {v.maxWeightKg && (
+                  <span className="flex items-center gap-1">
+                    <span className="text-sm">⚖️</span> {v.maxWeightKg} kg
+                  </span>
+                )}
+                {v.maxVolumeM3 && (
+                  <span className="flex items-center gap-1">
+                    <span className="text-sm">📐</span> {v.maxVolumeM3} m³
+                  </span>
+                )}
               </div>
             </div>
           ))}

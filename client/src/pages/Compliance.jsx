@@ -3,19 +3,19 @@ import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
 
 const ALERT_COLORS = {
-  MAX_DRIVE_TIME: 'bg-red-100 text-red-700',
-  MAX_WORK_TIME: 'bg-orange-100 text-orange-700',
-  MIN_REST: 'bg-yellow-100 text-yellow-700',
-  MISSING_LOG: 'bg-gray-100 text-gray-700',
-  MAX_CONTINUOUS_DRIVE: 'bg-red-100 text-red-700',
-  MIN_BREAK: 'bg-orange-100 text-orange-700',
+  MAX_DRIVE_TIME: { color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+  MAX_WORK_TIME: { color: '#f97316', bg: 'rgba(249,115,22,0.08)' },
+  MIN_REST: { color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+  MISSING_LOG: { color: '#94a3b8', bg: 'rgba(148,163,184,0.08)' },
+  MAX_CONTINUOUS_DRIVE: { color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+  MIN_BREAK: { color: '#f97316', bg: 'rgba(249,115,22,0.08)' },
 };
 
-const CERT_COLORS = {
-  OR: 'bg-yellow-400 text-yellow-900',
-  ARGENT: 'bg-gray-300 text-gray-800',
-  BRONZE: 'bg-orange-200 text-orange-800',
-  NON_CERTIFIE: 'bg-red-100 text-red-700',
+const CERT_CONFIG = {
+  OR: { label: '🥇 OR', color: '#eab308', bg: 'rgba(234,179,8,0.08)' },
+  ARGENT: { label: '🥈 ARGENT', color: '#94a3b8', bg: 'rgba(148,163,184,0.08)' },
+  BRONZE: { label: '🥉 BRONZE', color: '#f97316', bg: 'rgba(249,115,22,0.08)' },
+  NON_CERTIFIE: { label: '❌ Non certifié', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
 };
 
 function formatMinutes(min) {
@@ -56,89 +56,115 @@ export default function Compliance() {
     } catch (e) { alert(e.message); }
   };
 
-  if (loading) return <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>;
+  if (loading) {
+    return (
+      <div className="fn-stagger">
+        <div className="fn-skeleton h-8 w-48 mb-2 rounded-lg" />
+        <div className="fn-skeleton h-4 w-64 mb-6 rounded-lg" />
+        <div className="fn-skeleton h-40 rounded-2xl mb-6" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[...Array(4)].map((_, i) => <div key={i} className="fn-skeleton h-24 rounded-2xl" />)}
+        </div>
+      </div>
+    );
+  }
+
+  const certCfg = CERT_CONFIG[score?.level] || CERT_CONFIG.NON_CERTIFIE;
 
   return (
-    <div>
+    <div className="fn-animate-in">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Conformité Mobilic</h1>
-        <p className="text-gray-500 text-sm mt-1">Temps de conduite, repos et certification</p>
+        <h1 className="text-[24px] font-extrabold tracking-tight" style={{ color: 'var(--fn-text)' }}>Conformité Mobilic</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--fn-text-secondary)' }}>Temps de conduite, repos et certification</p>
       </div>
 
-      {/* Certification badge */}
+      {/* Score card */}
       {score && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <div className="flex items-center justify-between">
+        <div className="fn-card p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-sm text-gray-500 mb-1">Score de conformité</div>
-              <div className="text-4xl font-bold text-gray-900">{score.score || 0}<span className="text-lg text-gray-400">/100</span></div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--fn-text-muted)' }}>Score de conformité</div>
+              <div className="text-4xl font-extrabold tracking-tight" style={{ color: 'var(--fn-text)' }}>
+                {score.score || 0}<span className="text-lg font-medium" style={{ color: 'var(--fn-text-muted)' }}>/100</span>
+              </div>
             </div>
-            <div className={`px-4 py-2 rounded-full text-sm font-bold ${CERT_COLORS[score.level] || 'bg-gray-100'}`}>
-              {score.level === 'OR' ? '🥇 OR' : score.level === 'ARGENT' ? '🥈 ARGENT' : score.level === 'BRONZE' ? '🥉 BRONZE' : '❌ Non certifié'}
-            </div>
+            <span className="fn-badge text-sm font-bold" style={{ background: certCfg.bg, color: certCfg.color }}>
+              {certCfg.label}
+            </span>
           </div>
-          <div className="mt-4 bg-gray-200 rounded-full h-3 overflow-hidden">
-            <div className={`h-full rounded-full transition-all ${score.score >= 90 ? 'bg-yellow-500' : score.score >= 75 ? 'bg-gray-400' : score.score >= 60 ? 'bg-orange-400' : 'bg-red-400'}`}
-              style={{ width: `${Math.min(score.score || 0, 100)}%` }} />
+          <div className="h-3 rounded-full overflow-hidden" style={{ background: 'var(--fn-border)' }}>
+            <div className="h-full rounded-full transition-all duration-1000"
+              style={{
+                width: `${Math.min(score.score || 0, 100)}%`,
+                background: score.score >= 90 ? 'linear-gradient(90deg, #eab308, #facc15)' : score.score >= 75 ? 'linear-gradient(90deg, #94a3b8, #cbd5e1)' : score.score >= 60 ? 'linear-gradient(90deg, #f97316, #fb923c)' : 'linear-gradient(90deg, #ef4444, #f87171)'
+              }} />
           </div>
-          <div className="flex justify-between mt-2 text-xs text-gray-400">
+          <div className="flex justify-between mt-2 text-[11px] font-medium" style={{ color: 'var(--fn-text-muted)' }}>
             <span>0</span><span>60 Bronze</span><span>75 Argent</span><span>90 Or</span><span>100</span>
           </div>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        {['dashboard', 'alerts'].map(t => (
-          <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === t ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border hover:bg-gray-50'}`}>
-            {t === 'dashboard' ? '📊 Dashboard' : `🚨 Alertes (${alerts.filter(a => !a.resolved).length})`}
+      <div className="flex gap-1.5 mb-6">
+        {[{ key: 'dashboard', label: '📊 Dashboard' }, { key: 'alerts', label: `🚨 Alertes (${alerts.filter(a => !a.resolved).length})` }].map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            className="px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200"
+            style={{
+              background: tab === t.key ? 'var(--fn-gradient-primary)' : 'var(--fn-surface)',
+              color: tab === t.key ? 'white' : 'var(--fn-text-secondary)',
+              border: tab === t.key ? 'none' : '1px solid var(--fn-border)',
+              boxShadow: tab === t.key ? '0 2px 8px rgba(37,99,235,0.25)' : 'var(--fn-shadow-xs)',
+            }}>
+            {t.label}
           </button>
         ))}
       </div>
 
       {tab === 'dashboard' && dashboard && (
         <div>
-          {/* Stats grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="text-sm text-gray-500 mb-1">Conducteurs actifs</div>
-              <div className="text-2xl font-bold text-gray-900">{dashboard.activeDrivers || 0}</div>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="text-sm text-gray-500 mb-1">Conformes</div>
-              <div className="text-2xl font-bold text-green-600">{dashboard.compliantDrivers || 0}</div>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="text-sm text-gray-500 mb-1">En alerte</div>
-              <div className="text-2xl font-bold text-red-600">{dashboard.alertDrivers || 0}</div>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="text-sm text-gray-500 mb-1">Logs aujourd'hui</div>
-              <div className="text-2xl font-bold text-gray-900">{dashboard.todayLogs || 0}</div>
-            </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 fn-stagger">
+            {[
+              { label: 'Conducteurs actifs', value: dashboard.activeDrivers || 0, icon: '👤', color: '#3b82f6' },
+              { label: 'Conformes', value: dashboard.compliantDrivers || 0, icon: '✅', color: '#10b981' },
+              { label: 'En alerte', value: dashboard.alertDrivers || 0, icon: '⚠️', color: '#ef4444' },
+              { label: 'Logs aujourd\'hui', value: dashboard.todayLogs || 0, icon: '📋', color: '#8b5cf6' },
+            ].map((s, i) => (
+              <div key={i} className="fn-card p-5 relative overflow-hidden group">
+                <div className="absolute top-0 left-0 right-0 h-[3px] opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ background: s.color }} />
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-base">{s.icon}</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--fn-text-muted)' }}>{s.label}</span>
+                </div>
+                <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
+              </div>
+            ))}
           </div>
 
-          {/* Driver list */}
           {dashboard.drivers && dashboard.drivers.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200">
-              <div className="px-6 py-4 border-b"><h2 className="font-semibold">Conducteurs</h2></div>
-              <div className="divide-y">
+            <div className="fn-card overflow-hidden">
+              <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--fn-border-subtle)' }}>
+                <h2 className="text-[15px] font-bold" style={{ color: 'var(--fn-text)' }}>Conducteurs</h2>
+              </div>
+              <div>
                 {dashboard.drivers.map((d, i) => (
-                  <div key={i} className="px-6 py-4 flex items-center justify-between">
+                  <div key={i} className="px-6 py-4 flex items-center justify-between transition-colors hover:bg-gray-50/50"
+                    style={{ borderBottom: '1px solid var(--fn-border-subtle)' }}>
                     <div>
-                      <div className="font-medium text-sm">{d.name || `Conducteur #${d.id}`}</div>
-                      <div className="text-xs text-gray-500">
+                      <p className="text-sm font-semibold" style={{ color: 'var(--fn-text)' }}>{d.name || `Conducteur #${d.id}`}</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--fn-text-muted)' }}>
                         Conduite: {formatMinutes(d.driveMinutes || 0)} / {formatMinutes(d.maxDriveMinutes || 600)}
                         {' · '}Travail: {formatMinutes(d.workMinutes || 0)} / {formatMinutes(d.maxWorkMinutes || 720)}
-                      </div>
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {d.available ? (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Disponible</span>
-                      ) : (
-                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">Indisponible</span>
-                      )}
-                    </div>
+                    <span className="fn-badge" style={{
+                      background: d.available ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+                      color: d.available ? '#10b981' : '#ef4444',
+                    }}>
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: d.available ? '#10b981' : '#ef4444' }} />
+                      {d.available ? 'Disponible' : 'Indisponible'}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -146,10 +172,13 @@ export default function Compliance() {
           )}
 
           {(!dashboard.drivers || dashboard.drivers.length === 0) && (
-            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-              <div className="text-5xl mb-4">⏱️</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Connectez Mobilic</h3>
-              <p className="text-gray-500 text-sm">Rendez-vous dans l'onglet Mobilic pour connecter votre compte et suivre la conformité.</p>
+            <div className="fn-card text-center py-16 fn-animate-scale">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
+                style={{ background: 'rgba(37,99,235,0.06)' }}>
+                <span className="text-3xl">⏱️</span>
+              </div>
+              <p className="text-[15px] font-bold mb-1" style={{ color: 'var(--fn-text)' }}>Connectez Mobilic</p>
+              <p className="text-sm" style={{ color: 'var(--fn-text-muted)' }}>Rendez-vous dans l'onglet Mobilic pour connecter votre compte.</p>
             </div>
           )}
         </div>
@@ -158,31 +187,50 @@ export default function Compliance() {
       {tab === 'alerts' && (
         <div>
           {alerts.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-              <div className="text-5xl mb-4">✅</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucune alerte</h3>
-              <p className="text-gray-500 text-sm">Tous vos conducteurs sont en conformité.</p>
+            <div className="fn-card text-center py-16 fn-animate-scale">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
+                style={{ background: 'rgba(16,185,129,0.06)' }}>
+                <span className="text-3xl">✅</span>
+              </div>
+              <p className="text-[15px] font-bold mb-1" style={{ color: 'var(--fn-text)' }}>Aucune alerte</p>
+              <p className="text-sm" style={{ color: 'var(--fn-text-muted)' }}>Tous vos conducteurs sont en conformité.</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {alerts.map(a => (
-                <div key={a.id} className={`bg-white rounded-xl border border-gray-200 p-4 ${a.resolved ? 'opacity-60' : ''}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${ALERT_COLORS[a.type] || 'bg-gray-100'}`}>{(a.type || '').replace(/_/g, ' ')}</span>
-                      {a.resolved && <span className="text-xs text-green-600">✅ Résolu</span>}
+            <div className="space-y-3 fn-stagger">
+              {alerts.map(a => {
+                const ac = ALERT_COLORS[a.type] || { color: '#94a3b8', bg: 'rgba(148,163,184,0.08)' };
+                return (
+                  <div key={a.id} className="fn-card p-4 transition-opacity" style={{ opacity: a.resolved ? 0.5 : 1 }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="fn-badge" style={{ background: ac.bg, color: ac.color }}>
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: ac.color }} />
+                          {(a.type || '').replace(/_/g, ' ')}
+                        </span>
+                        {a.resolved && (
+                          <span className="fn-badge" style={{ background: 'rgba(16,185,129,0.08)', color: '#10b981' }}>
+                            ✅ Résolu
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px]" style={{ color: 'var(--fn-text-muted)' }}>
+                        {a.createdAt ? new Date(a.createdAt).toLocaleDateString('fr-FR') : ''}
+                      </span>
                     </div>
-                    <span className="text-xs text-gray-400">{a.createdAt ? new Date(a.createdAt).toLocaleDateString('fr-FR') : ''}</span>
+                    <p className="text-sm" style={{ color: 'var(--fn-text-secondary)' }}>{a.message || a.description}</p>
+                    {a.driverName && <p className="text-xs mt-1" style={{ color: 'var(--fn-text-muted)' }}>Conducteur : {a.driverName}</p>}
+                    {!a.resolved && (
+                      <button onClick={() => resolve(a.id)}
+                        className="mt-3 px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors duration-200"
+                        style={{ color: '#3b82f6', background: 'rgba(37,99,235,0.06)' }}
+                        onMouseEnter={e => e.target.style.background = 'rgba(37,99,235,0.12)'}
+                        onMouseLeave={e => e.target.style.background = 'rgba(37,99,235,0.06)'}>
+                        Marquer résolu
+                      </button>
+                    )}
                   </div>
-                  <div className="text-sm text-gray-700">{a.message || a.description}</div>
-                  {a.driverName && <div className="text-xs text-gray-500 mt-1">Conducteur : {a.driverName}</div>}
-                  {!a.resolved && (
-                    <button onClick={() => resolve(a.id)} className="mt-3 px-4 py-1.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg hover:bg-blue-100">
-                      Marquer résolu
-                    </button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

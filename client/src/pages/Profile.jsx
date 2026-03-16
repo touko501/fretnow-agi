@@ -16,49 +16,97 @@ export default function Profile() {
     setSaving(false);
   };
 
-  const inp = "w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500";
-
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Mon profil</h1>
+    <div className="max-w-2xl mx-auto fn-animate-in">
+      <div className="mb-8">
+        <h1 className="text-[24px] font-extrabold tracking-tight" style={{ color: 'var(--fn-text)' }}>Mon profil</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--fn-text-secondary)' }}>Gérez vos informations personnelles</p>
+      </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-            <span className="text-2xl font-bold text-blue-700">{user?.firstName?.[0]}{user?.lastName?.[0]}</span>
+      <div className="fn-card p-6 mb-4">
+        {/* Avatar & info header */}
+        <div className="flex items-center gap-4 mb-6 pb-6" style={{ borderBottom: '1px solid var(--fn-border-subtle)' }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center relative overflow-hidden"
+            style={{ background: 'var(--fn-gradient-primary)', boxShadow: '0 4px 15px rgba(37,99,235,0.25)' }}>
+            <span className="text-xl font-bold text-white">{user?.firstName?.[0]}{user?.lastName?.[0]}</span>
           </div>
           <div>
-            <div className="text-lg font-bold text-gray-900">{user?.firstName} {user?.lastName}</div>
-            <div className="text-sm text-gray-500">{user?.email}</div>
-            <div className="flex gap-2 mt-1">
-              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">{user?.role}</span>
-              {user?.isVerified && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Vérifié</span>}
+            <div className="text-lg font-bold" style={{ color: 'var(--fn-text)' }}>{user?.firstName} {user?.lastName}</div>
+            <div className="text-sm" style={{ color: 'var(--fn-text-muted)' }}>{user?.email}</div>
+            <div className="flex gap-2 mt-1.5">
+              <span className="fn-badge" style={{ background: 'rgba(37,99,235,0.08)', color: '#3b82f6' }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#3b82f6' }} />
+                {user?.role}
+              </span>
+              {user?.isVerified && (
+                <span className="fn-badge" style={{ background: 'rgba(16,185,129,0.08)', color: '#10b981' }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#10b981' }} />
+                  Vérifié
+                </span>
+              )}
             </div>
           </div>
         </div>
 
-        {msg && <div className={`px-4 py-3 rounded-lg text-sm mb-4 ${msg.includes('!') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{msg}</div>}
+        {msg && (
+          <div className="fn-animate-in mb-5 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium"
+            style={{
+              background: msg.includes('!') ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)',
+              color: msg.includes('!') ? '#10b981' : '#ef4444',
+              border: msg.includes('!') ? '1px solid rgba(16,185,129,0.1)' : '1px solid rgba(239,68,68,0.1)',
+            }}>
+            {msg.includes('!') ? '✅' : '⚠️'} {msg}
+          </div>
+        )}
 
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Prénom</label><input value={f.firstName} onChange={e => u('firstName', e.target.value)} className={inp} /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Nom</label><input value={f.lastName} onChange={e => u('lastName', e.target.value)} className={inp} /></div>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--fn-text-muted)' }}>Prénom</label>
+              <input value={f.firstName} onChange={e => u('firstName', e.target.value)} className="fn-input w-full" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--fn-text-muted)' }}>Nom</label>
+              <input value={f.lastName} onChange={e => u('lastName', e.target.value)} className="fn-input w-full" />
+            </div>
           </div>
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label><input value={f.phone} onChange={e => u('phone', e.target.value)} className={inp} /></div>
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input value={user?.email || ''} disabled className={inp + " bg-gray-50 text-gray-500"} /></div>
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--fn-text-muted)' }}>Téléphone</label>
+            <input value={f.phone} onChange={e => u('phone', e.target.value)} className="fn-input w-full" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--fn-text-muted)' }}>Email</label>
+            <input value={user?.email || ''} disabled className="fn-input w-full opacity-50" />
+          </div>
         </div>
-        <button onClick={save} disabled={saving} className="mt-6 px-6 py-2.5 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50 text-sm">{saving ? 'Enregistrement...' : 'Enregistrer'}</button>
+
+        <button onClick={save} disabled={saving} className="fn-btn fn-btn-primary mt-6">
+          {saving ? (
+            <span className="inline-flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              Enregistrement...
+            </span>
+          ) : 'Enregistrer'}
+        </button>
       </div>
 
       {user?.company && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Entreprise</h2>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between"><span className="text-gray-500">Raison sociale</span><span className="font-medium">{user.company.name}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">SIREN</span><span className="font-medium">{user.company.siren}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="font-medium">{user.company.type}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Vérifié</span><span className={user.company.isVerified ? 'text-green-600 font-medium' : 'text-orange-600'}>{user.company.isVerified ? '✅ Oui' : '⏳ En attente'}</span></div>
-            {user.company.mobilicEnabled && <div className="flex justify-between"><span className="text-gray-500">Mobilic</span><span className="text-green-600 font-medium">✅ Connecté</span></div>}
+        <div className="fn-card p-6">
+          <h2 className="text-[15px] font-bold mb-4" style={{ color: 'var(--fn-text)' }}>Entreprise</h2>
+          <div className="space-y-3">
+            {[
+              { label: 'Raison sociale', value: user.company.name },
+              { label: 'SIREN', value: user.company.siren },
+              { label: 'Type', value: user.company.type },
+              { label: 'Vérifié', value: user.company.isVerified ? '✅ Oui' : '⏳ En attente', color: user.company.isVerified ? '#10b981' : '#f59e0b' },
+              user.company.mobilicEnabled && { label: 'Mobilic', value: '✅ Connecté', color: '#10b981' },
+            ].filter(Boolean).map((item, i) => (
+              <div key={i} className="flex items-center justify-between py-2.5"
+                style={{ borderBottom: '1px solid var(--fn-border-subtle)' }}>
+                <span className="text-sm" style={{ color: 'var(--fn-text-muted)' }}>{item.label}</span>
+                <span className="text-sm font-semibold" style={{ color: item.color || 'var(--fn-text)' }}>{item.value}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
