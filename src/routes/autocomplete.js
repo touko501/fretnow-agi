@@ -100,18 +100,31 @@ router.get('/reverse', async (req, res) => {
 router.get('/company', async (req, res) => {
   try {
     const { q, limit, transportOnly, department } = req.query;
-    
+
     if (!q || q.length < 2) {
       return res.json({ results: [], query: q || '' });
     }
 
-    const results = await smartAutocomplete.searchCompany(q, {
+    // Direct API SIRENE call for reliability
+    const axios = require('axios');
+    try {
+      const params = { q, per_page: parseInt(limit) || 5, etat_administratif: 'A' };
+      const apiRes = await axios.get('https://recherche-entreprises.api.gouv.fr/search', { params, timeout: 5000 });
+      const results = apiRes.data?.results || [];
+      return res.json({ results, total: apiRes.data?.total_results || results.length, query: q });
+    } catch (e) {
+      console.warn('Direct SIRENE API failed, trying service fallback:', e.message);
+    }
+
+    // Fallback to service
+    const data = await smartAutocomplete.searchCompany(q, {
       limit: parseInt(limit) || 5,
       transportOnly: transportOnly === 'true',
       department
     });
 
-    res.json(results);
+    const results = data.results || data.companies || [];
+    res.json({ results, total: data.total || results.length, query: q });
   } catch (error) {
     console.error('Erreur recherche entreprise:', error.message);
     res.status(500).json({ error: 'Erreur serveur', results: [] });
@@ -145,14 +158,27 @@ router.get('/siret/:siret', async (req, res) => {
 router.get('/siren/:siren', async (req, res) => {
   try {
     const { siren } = req.params;
-    
+
     if (!/^\d{9}$/.test(siren)) {
       return res.status(400).json({ valid: false, error: 'Format SIREN invalide (9 chiffres requis)' });
     }
 
-    const results = await smartAutocomplete.searchCompany(siren, { limit: 1 });
-    const company = results.results?.[0];
-    
+    // Try direct API SIRENE call for SIREN lookup
+    const axios = require('axios');
+    try {
+      const apiRes = await axios.get(`https://recherche-entreprises.api.gouv.fr/search?q=${siren}&per_page=1`, { timeout: 5000 });
+      const company = apiRes.data?.results?.[0];
+      if (company && company.siren === siren) {
+        return res.json({ valid: true, siren, ...company });
+      }
+    } catch (e) {
+      console.warn('Direct SIRENE API failed, trying service fallback:', e.message);
+    }
+
+    // Fallback to service
+    const data = await smartAutocomplete.searchCompany(siren, { limit: 1 });
+    const company = data.results?.[0] || data.companies?.[0];
+
     if (!company || company.siren !== siren) {
       return res.json({ valid: false, siren, error: 'SIREN non trouvé' });
     }

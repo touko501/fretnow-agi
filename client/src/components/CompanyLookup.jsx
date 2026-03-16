@@ -209,7 +209,7 @@ export default function CompanyLookup({ siren, siret, companyName, onCompanyFoun
                     {c.nom_complet || c.nom_raison_sociale || c.name}
                   </p>
                   <p className="text-[11px] text-slate-400 truncate">
-                    SIREN: {c.siren || '—'} {c.siege?.adresse ? `· ${c.siege.adresse}` : ''}
+                    SIREN: {c.siren || '—'} {c.siege?.adresse ? `· ${c.siege.adresse}` : c.city ? `· ${c.postalCode || ''} ${c.city}` : ''}
                   </p>
                 </div>
               </button>
