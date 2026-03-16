@@ -73,7 +73,7 @@ export default function Register() {
             {[
               { icon: '💰', text: 'Commission 10% au lieu de 25%' },
               { icon: '⚡', text: 'Paiement garanti J+1' },
-              { icon: '🤖', text: '10 agents IA à votre service' },
+              { icon: '🎯', text: 'Matching intelligent expéditeur-transporteur' },
               { icon: '🔒', text: '0€ d\'abonnement — toujours' },
             ].map((b, i) => (
               <div key={i} className="flex items-center gap-3 fn-animate-in-up" style={{ animationDelay: `${400 + i * 100}ms` }}>

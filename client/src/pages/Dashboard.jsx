@@ -161,42 +161,40 @@ function QuickAction({ to, icon, label, description, gradient }) {
   );
 }
 
-/* ─── NOVA Activity Card ─── */
-function NovaCard() {
-  const activities = [
-    { text: 'Matching optimal trouvé pour 3 missions', time: 'il y a 2 min', agent: 'Matcher' },
-    { text: 'Pricing dynamique ajusté (axe Lyon–Paris)', time: 'il y a 8 min', agent: 'Pricing' },
-    { text: 'Score conformité mis à jour', time: 'il y a 15 min', agent: 'Compliance' },
+/* ─── Platform Status Card ─── */
+function PlatformCard({ isTransporteur }) {
+  const tips = isTransporteur ? [
+    { icon: '🔍', text: 'Consultez les missions disponibles et placez vos offres' },
+    { icon: '⏱️', text: 'Connectez Mobilic pour le suivi des temps de conduite' },
+    { icon: '💰', text: 'Recevez vos paiements directement sur votre portefeuille' },
+  ] : [
+    { icon: '📦', text: 'Publiez une mission avec les détails de votre expédition' },
+    { icon: '🎯', text: 'Recevez des offres de transporteurs vérifiés' },
+    { icon: '💳', text: 'Payez en ligne, le transporteur est payé à la livraison' },
   ];
 
   return (
     <div className="fn-card overflow-hidden">
-      <div className="p-5 relative" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
-        <div className="fn-orb" style={{ width: 100, height: 100, background: '#6366f1', top: -40, right: -20, opacity: 0.2, filter: 'blur(40px)' }} />
-        <div className="fn-orb" style={{ width: 60, height: 60, background: '#3b82f6', bottom: -20, left: 10, opacity: 0.15, filter: 'blur(30px)' }} />
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.3) 0%, rgba(59,130,246,0.3) 100%)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <span className="text-lg">🤖</span>
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-white">NOVA Intelligence</h3>
-            <p className="text-[11px] text-slate-400">10 agents actifs en continu</p>
-          </div>
-        </div>
+      <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--fn-border-subtle)' }}>
+        <h3 className="text-[13px] font-bold" style={{ color: 'var(--fn-text)' }}>Comment ça marche</h3>
+        <p className="text-[11px] mt-0.5" style={{ color: 'var(--fn-text-muted)' }}>En 3 étapes simples</p>
       </div>
       <div className="p-3">
-        {activities.map((a, i) => (
-          <div key={i} className="flex items-start gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-gray-50">
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs font-medium" style={{ color: 'var(--fn-text)' }}>{a.text}</p>
-              <p className="text-[10px] mt-0.5" style={{ color: 'var(--fn-text-muted)' }}>
-                <span className="font-semibold text-blue-500">{a.agent}</span> · {a.time}
-              </p>
+        {tips.map((t, i) => (
+          <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0"
+              style={{ background: 'rgba(37,99,235,0.06)' }}>
+              {t.icon}
             </div>
+            <p className="text-xs font-medium" style={{ color: 'var(--fn-text-secondary)' }}>{t.text}</p>
           </div>
         ))}
+      </div>
+      <div className="px-5 pb-4">
+        <Link to={isTransporteur ? '/missions' : '/missions/new'}
+          className="fn-btn fn-btn-primary w-full text-xs py-2.5 justify-center">
+          {isTransporteur ? 'Explorer les missions' : 'Créer une mission'}
+        </Link>
       </div>
     </div>
   );
@@ -372,8 +370,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* NOVA AI */}
-          <NovaCard />
+          {/* How it works */}
+          <PlatformCard isTransporteur={isTransporteur} />
         </div>
       </div>
     </div>

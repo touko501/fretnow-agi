@@ -53,16 +53,16 @@ export default function Login() {
             </span>
           </h1>
           <p className="text-base text-slate-400 leading-relaxed">
-            Commission 10% au lieu de 25%. Paiement J+1 garanti.
-            10 agents IA qui optimisent chaque trajet.
+            Commission 10% au lieu de 25%. Paiement garanti.
+            Connectez expéditeurs et transporteurs sans intermédiaire.
           </p>
 
           {/* Stats row */}
           <div className="flex gap-8 mt-8">
             {[
               { value: '10%', label: 'Commission' },
-              { value: 'J+1', label: 'Paiement' },
-              { value: '10', label: 'Agents IA' },
+              { value: '0€', label: 'Abonnement' },
+              { value: '24/7', label: 'Accès' },
             ].map((s, i) => (
               <div key={i} className="fn-animate-in-up" style={{ animationDelay: `${400 + i * 100}ms` }}>
                 <div className="text-2xl font-extrabold text-white">{s.value}</div>

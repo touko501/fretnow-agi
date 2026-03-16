@@ -29,7 +29,7 @@ const NAV = {
     { path: '/messagerie', icon: '🚀', label: 'Messagerie / Express' },
     { path: '/mobilic', icon: '⏱️', label: 'Mobilic' },
     { path: '/compliance', icon: '✅', label: 'Conformité' },
-    { path: '/agents', icon: '🤖', label: 'Agents IA' },
+    { path: '/agents', icon: '⚙️', label: 'Automatisation' },
     { path: '/wallet', icon: '💰', label: 'Finance' },
     { path: '/notifications', icon: '🔔', label: 'Notifications' },
     { path: '/profile', icon: '⚙️', label: 'Admin' },
@@ -37,21 +37,14 @@ const NAV = {
 };
 NAV.SUPER_ADMIN = NAV.ADMIN;
 
-function NovaStatusPill() {
-  const [pulse, setPulse] = useState(true);
-  useEffect(() => {
-    const t = setInterval(() => setPulse(p => !p), 2000);
-    return () => clearInterval(t);
-  }, []);
-
+function BetaPill() {
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
-      style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(6,182,212,0.1) 100%)', color: '#059669' }}>
+      style={{ background: 'rgba(245,158,11,0.08)', color: '#f59e0b' }}>
       <span className="relative flex h-2 w-2">
-        <span className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 ${pulse ? 'animate-ping' : ''}`} style={{ animationDuration: '1.5s' }} />
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
       </span>
-      NOVA AI Active
+      Bêta
     </div>
   );
 }
@@ -101,7 +94,7 @@ export default function Layout({ children }) {
                 <span className="text-lg font-extrabold tracking-tight" style={{ color: 'var(--fn-text)' }}>FRETNOW</span>
                 <span className="block text-[10px] font-semibold tracking-wider uppercase"
                   style={{ background: 'var(--fn-gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                  Powered by NOVA AI
+                  Marketplace B2B
                 </span>
               </div>
             </Link>
@@ -132,20 +125,17 @@ export default function Layout({ children }) {
             })}
           </nav>
 
-          {/* NOVA mini card */}
+          {/* Help card */}
           <div className="px-3 pb-3">
-            <div className="rounded-xl p-4 relative overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
-              <div className="fn-orb" style={{ width: 60, height: 60, background: '#3b82f6', top: -20, right: -10, opacity: 0.3 }} />
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-base">🤖</span>
-                  <span className="text-xs font-bold text-white tracking-wide">NOVA</span>
-                </div>
-                <p className="text-[11px] leading-relaxed text-slate-400">
-                  10 agents IA optimisent vos opérations 24/7
-                </p>
+            <div className="rounded-xl p-4"
+              style={{ background: 'var(--fn-surface)', border: '1px solid var(--fn-border-subtle)' }}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-base">💡</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--fn-text)' }}>Besoin d'aide ?</span>
               </div>
+              <p className="text-[11px] leading-relaxed" style={{ color: 'var(--fn-text-muted)' }}>
+                support@fretnow.com
+              </p>
             </div>
           </div>
 
@@ -193,8 +183,8 @@ export default function Layout({ children }) {
 
           <div className="flex-1" />
 
-          {/* NOVA pill */}
-          <NovaStatusPill />
+          {/* Beta pill */}
+          <BetaPill />
 
           {/* Notifications */}
           <Link to="/notifications" className="relative p-2 rounded-lg transition-colors hover:bg-gray-100"

@@ -15,17 +15,21 @@ export default function Agents() {
   }, []);
 
   const agentList = [
-    { id: '001', name: 'MatcherAgent', icon: '🎯', desc: 'Matching multi-critères intelligent', color: '#3b82f6' },
-    { id: '002', name: 'PricingAgent', icon: '💰', desc: 'Tarification dynamique CNR', color: '#f59e0b' },
-    { id: '003', name: 'ScoutAgent', icon: '🔍', desc: 'Prospection automatisée', color: '#8b5cf6' },
-    { id: '004', name: 'CommsAgent', icon: '📧', desc: 'Notifications et relances', color: '#06b6d4' },
-    { id: '005', name: 'ConvertAgent', icon: '📈', desc: 'Optimisation conversion', color: '#10b981' },
-    { id: '006', name: 'RiskAgent', icon: '🛡️', desc: 'Scoring risque et fraude', color: '#ef4444' },
-    { id: '007', name: 'PredictAgent', icon: '🔮', desc: 'Prédiction de demande', color: '#a855f7' },
-    { id: '008', name: 'AnalystAgent', icon: '📊', desc: 'Analytics et KPIs', color: '#f97316' },
-    { id: '009', name: 'NOVA', icon: '🤖', desc: 'Marketing et brand voice', color: '#ec4899' },
-    { id: '010', name: 'ComplianceAgent', icon: '⏱️', desc: 'Conformité Mobilic', color: '#14b8a6' },
+    { id: '001', name: 'MatcherAgent', icon: '🎯', desc: 'Matching multi-critères entre missions et transporteurs', color: '#3b82f6', status: 'active' },
+    { id: '002', name: 'PricingAgent', icon: '💰', desc: 'Estimation tarifaire basée sur distance et indices CNR', color: '#f59e0b', status: 'active' },
+    { id: '003', name: 'ComplianceAgent', icon: '⏱️', desc: 'Vérification des temps de conduite et repos (Mobilic)', color: '#14b8a6', status: 'active' },
+    { id: '004', name: 'CommsAgent', icon: '📧', desc: 'Notifications et relances automatisées', color: '#06b6d4', status: 'beta' },
+    { id: '005', name: 'RiskAgent', icon: '🛡️', desc: 'Scoring de fiabilité des entreprises', color: '#ef4444', status: 'beta' },
+    { id: '006', name: 'ScoutAgent', icon: '🔍', desc: 'Prospection de transporteurs qualifiés', color: '#8b5cf6', status: 'roadmap' },
+    { id: '007', name: 'PredictAgent', icon: '🔮', desc: 'Prédiction de la demande par axe', color: '#a855f7', status: 'roadmap' },
+    { id: '008', name: 'AnalystAgent', icon: '📊', desc: 'Analytics et tableaux de bord avancés', color: '#f97316', status: 'roadmap' },
   ];
+
+  const STATUS_LABELS = {
+    active: { label: 'Actif', color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
+    beta: { label: 'Bêta', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+    roadmap: { label: 'Prévu', color: '#94a3b8', bg: 'rgba(148,163,184,0.08)' },
+  };
 
   if (loading) {
     return (
@@ -42,50 +46,89 @@ export default function Agents() {
   return (
     <div className="fn-animate-in">
       <div className="mb-8">
-        <h1 className="text-[24px] font-extrabold tracking-tight" style={{ color: 'var(--fn-text)' }}>Agents IA</h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--fn-text-secondary)' }}>10 agents spécialisés travaillent en continu pour optimiser la plateforme</p>
+        <h1 className="text-[24px] font-extrabold tracking-tight" style={{ color: 'var(--fn-text)' }}>Automatisation</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--fn-text-secondary)' }}>Services intelligents qui optimisent la plateforme en continu</p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4 fn-stagger">
-        {agentList.map((a) => (
-          <div key={a.id} className="fn-card fn-card-interactive p-5 group relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-[3px] opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ background: `linear-gradient(90deg, ${a.color}, ${a.color}88)` }} />
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 transition-transform duration-200 group-hover:scale-110"
-                style={{ background: `${a.color}10` }}>
-                {a.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-mono" style={{ color: 'var(--fn-text-muted)' }}>#{a.id}</span>
+      {/* Active */}
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider mb-3 px-1" style={{ color: 'var(--fn-text-muted)' }}>
+        Actifs ({agentList.filter(a => a.status === 'active').length})
+      </h3>
+      <div className="grid md:grid-cols-2 gap-4 mb-8 fn-stagger">
+        {agentList.filter(a => a.status === 'active').map((a) => {
+          const st = STATUS_LABELS[a.status];
+          return (
+            <div key={a.id} className="fn-card fn-card-interactive p-5 group relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-[3px] opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: `linear-gradient(90deg, ${a.color}, ${a.color}88)` }} />
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 transition-transform duration-200 group-hover:scale-110" style={{ background: `${a.color}10` }}>{a.icon}</div>
+                <div className="flex-1 min-w-0">
                   <h3 className="text-sm font-bold" style={{ color: 'var(--fn-text)' }}>{a.name}</h3>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--fn-text-muted)' }}>{a.desc}</p>
                 </div>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--fn-text-muted)' }}>{a.desc}</p>
+                <span className="fn-badge shrink-0" style={{ background: st.bg, color: st.color }}>
+                  <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: st.color }} />
+                  {st.label}
+                </span>
               </div>
-              <span className="fn-badge shrink-0" style={{ background: 'rgba(16,185,129,0.08)', color: '#10b981' }}>
-                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#10b981' }} />
-                Actif
-              </span>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Cortex */}
-      <div className="mt-8 fn-gradient-card p-6 relative overflow-hidden" style={{ background: 'var(--fn-gradient-primary)' }}>
-        <div className="fn-orb" style={{ width: 150, height: 150, background: 'rgba(255,255,255,0.1)', top: -40, right: -20, filter: 'blur(50px)' }} />
-        <div className="fn-orb" style={{ width: 100, height: 100, background: 'rgba(255,255,255,0.08)', bottom: -30, left: '30%', filter: 'blur(40px)', animationDelay: '2s' }} />
-        <div className="relative z-10 flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0"
-            style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)' }}>
-            🧠
-          </div>
-          <div>
-            <h2 className="text-xl font-extrabold text-white tracking-tight">Cortex — Cerveau Central</h2>
-            <p className="text-sm text-white/60 mt-0.5">Orchestrateur qui coordonne les 10 agents en temps réel pour chaque décision.</p>
-          </div>
-        </div>
+      {/* Beta */}
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider mb-3 px-1" style={{ color: 'var(--fn-text-muted)' }}>
+        En bêta ({agentList.filter(a => a.status === 'beta').length})
+      </h3>
+      <div className="grid md:grid-cols-2 gap-4 mb-8">
+        {agentList.filter(a => a.status === 'beta').map((a) => {
+          const st = STATUS_LABELS[a.status];
+          return (
+            <div key={a.id} className="fn-card p-5" style={{ opacity: 0.8 }}>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style={{ background: `${a.color}10` }}>{a.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-bold" style={{ color: 'var(--fn-text)' }}>{a.name}</h3>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--fn-text-muted)' }}>{a.desc}</p>
+                </div>
+                <span className="fn-badge shrink-0" style={{ background: st.bg, color: st.color }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: st.color }} />{st.label}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Roadmap */}
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider mb-3 px-1" style={{ color: 'var(--fn-text-muted)' }}>Roadmap ({agentList.filter(a => a.status === 'roadmap').length})</h3>
+      <div className="grid md:grid-cols-3 gap-4 mb-8">
+        {agentList.filter(a => a.status === 'roadmap').map((a) => {
+          const st = STATUS_LABELS[a.status];
+          return (
+            <div key={a.id} className="fn-card p-4" style={{ opacity: 0.5 }}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0" style={{ background: `${a.color}08` }}>{a.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xs font-bold" style={{ color: 'var(--fn-text)' }}>{a.name}</h3>
+                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--fn-text-muted)' }}>{a.desc}</p>
+                </div>
+                <span className="fn-badge text-[10px] shrink-0" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* How it works */}
+      <div className="fn-card p-6 relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: 'var(--fn-gradient-primary)' }} />
+        <h3 className="text-[15px] font-bold mb-2" style={{ color: 'var(--fn-text)' }}>Comment ça fonctionne</h3>
+        <p className="text-sm leading-relaxed" style={{ color: 'var(--fn-text-secondary)' }}>
+          Les services actifs fonctionnent en arrière-plan pour chaque mission. Le MatcherAgent trouve les transporteurs adaptés,
+          le PricingAgent estime un tarif juste basé sur la distance et les indices CNR, et le ComplianceAgent vérifie la conformité réglementaire.
+          Les services en bêta et prévus seront activés progressivement.
+        </p>
       </div>
     </div>
   );
