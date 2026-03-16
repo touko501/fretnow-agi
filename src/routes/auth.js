@@ -8,18 +8,6 @@ const { authenticate, generateTokens } = require('../middleware/auth');
 const { authLimiter } = require('../config/security');
 const { validate, schemas } = require('../middleware/validate');
 
-// ═══ GET /auth/debug-register-test ═══
-router.get('/debug-register-test', async (req, res) => {
-  try {
-    const count = await prisma.user.count();
-    const auditCount = await prisma.auditLog.count();
-    const notifCount = await prisma.notification.count();
-    res.json({ ok: true, users: count, auditLogs: auditCount, notifications: notifCount });
-  } catch (err) {
-    res.json({ ok: false, error: err.message, code: err.code });
-  }
-});
-
 // ═══ POST /auth/register ═══
 router.post('/register', authLimiter, validate(schemas.registerSchema), async (req, res) => {
   try {
@@ -77,7 +65,7 @@ router.post('/register', authLimiter, validate(schemas.registerSchema), async (r
   } catch (err) {
     if (err.message.includes('SIREN')) return res.status(409).json({ error: err.message });
     console.error('Register error:', err);
-    res.status(500).json({ error: 'Erreur serveur', detail: err.message });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
