@@ -1,5 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
+
+function AnimatedAmount({ value, prefix = '', suffix = '' }) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    if (!value) { setDisplay(0); return; }
+    const duration = 900;
+    const startTime = performance.now();
+    function animate(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(eased * value);
+      if (progress < 1) requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+  }, [value]);
+  return <span className="fn-number">{prefix}{display.toFixed(2).replace('.', ',')}{suffix}</span>;
+}
+
+const TX_CONFIG = {
+  TOPUP: { icon: '💳', label: 'Rechargement', color: '#2563eb' },
+  COMMISSION: { icon: '📊', label: 'Commission', color: '#7c3aed' },
+  PAYMENT: { icon: '💰', label: 'Paiement', color: '#059669' },
+  RESERVE: { icon: '🔒', label: 'Séquestre', color: '#f59e0b' },
+  RELEASE: { icon: '✅', label: 'Libération', color: '#10b981' },
+  REFUND: { icon: '↩️', label: 'Remboursement', color: '#6366f1' },
+};
 
 export default function Wallet() {
   const [balance, setBalance] = useState(null);
@@ -16,49 +43,113 @@ export default function Wallet() {
     load();
   }, []);
 
-  const txIcons = { TOPUP: '💳', COMMISSION: '📊', PAYMENT: '💰', RESERVE: '🔒', RELEASE: '✅', REFUND: '↩️' };
+  if (loading) {
+    return (
+      <div className="fn-stagger">
+        <div className="fn-skeleton h-8 w-40 mb-2" />
+        <div className="fn-skeleton h-4 w-64 mb-8" />
+        <div className="grid md:grid-cols-3 gap-4 mb-8">
+          {[...Array(3)].map((_, i) => <div key={i} className="fn-skeleton h-32 rounded-2xl" />)}
+        </div>
+        <div className="fn-skeleton h-64 rounded-2xl" />
+      </div>
+    );
+  }
 
-  if (loading) return <div className="text-center py-20 text-gray-400">Chargement...</div>;
+  const bal = balance?.balance != null ? balance.balance / 100 : 0;
+  const reserved = balance?.reserved != null ? balance.reserved / 100 : 0;
+  const earned = balance?.totalEarned != null ? balance.totalEarned / 100 : 0;
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Portefeuille</h1>
+    <div className="fn-animate-in">
+      <div className="mb-8">
+        <h1 className="text-[24px] font-extrabold tracking-tight" style={{ color: 'var(--fn-text)' }}>Portefeuille</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--fn-text-secondary)' }}>Gérez votre solde et suivez vos transactions</p>
+      </div>
 
-      <div className="grid md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-gradient-to-br from-brand-600 to-brand-700 rounded-xl p-6 text-white">
-          <p className="text-blue-200 text-sm">Solde disponible</p>
-          <p className="text-3xl font-bold mt-1">{balance?.balance != null ? `${(balance.balance / 100).toFixed(2)} €` : '—'}</p>
+      {/* Balance cards */}
+      <div className="grid md:grid-cols-3 gap-4 mb-8 fn-stagger">
+        {/* Main balance */}
+        <div className="fn-gradient-card p-6 relative" style={{ background: 'var(--fn-gradient-primary)' }}>
+          <div className="fn-orb" style={{ width: 100, height: 100, background: 'rgba(255,255,255,0.1)', top: -30, right: -20, filter: 'blur(40px)' }} />
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-3">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" opacity="0.7"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              <span className="text-xs font-semibold text-white/70 uppercase tracking-wider">Solde disponible</span>
+            </div>
+            <div className="text-3xl font-extrabold text-white tracking-tight">
+              <AnimatedAmount value={bal} suffix=" €" />
+            </div>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border p-6">
-          <p className="text-gray-500 text-sm">En séquestre</p>
-          <p className="text-2xl font-bold text-orange-600 mt-1">{balance?.reserved != null ? `${(balance.reserved / 100).toFixed(2)} €` : '0.00 €'}</p>
+
+        {/* Reserved */}
+        <div className="fn-card p-6 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-[3px] opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'var(--fn-gradient-warm)' }} />
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-base">🔒</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--fn-text-muted)' }}>En séquestre</span>
+          </div>
+          <div className="text-2xl font-bold" style={{ color: '#f59e0b' }}>
+            <AnimatedAmount value={reserved} suffix=" €" />
+          </div>
         </div>
-        <div className="bg-white rounded-xl border p-6">
-          <p className="text-gray-500 text-sm">Total gagné</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{balance?.totalEarned != null ? `${(balance.totalEarned / 100).toFixed(2)} €` : '0.00 €'}</p>
+
+        {/* Total earned */}
+        <div className="fn-card p-6 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-[3px] opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'var(--fn-gradient-fresh)' }} />
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-base">📈</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--fn-text-muted)' }}>Total gagné</span>
+          </div>
+          <div className="text-2xl font-bold" style={{ color: '#059669' }}>
+            <AnimatedAmount value={earned} suffix=" €" />
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border">
-        <div className="px-6 py-4 border-b"><h2 className="font-semibold">Transactions</h2></div>
+      {/* Transactions */}
+      <div className="fn-card overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--fn-border-subtle)' }}>
+          <div>
+            <h2 className="text-[15px] font-bold" style={{ color: 'var(--fn-text)' }}>Transactions</h2>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--fn-text-muted)' }}>{transactions.length} transaction(s)</p>
+          </div>
+        </div>
+
         {transactions.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">Aucune transaction</div>
+          <div className="text-center py-16">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{ background: 'rgba(37,99,235,0.06)' }}>
+              <span className="text-3xl">💳</span>
+            </div>
+            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--fn-text)' }}>Aucune transaction</p>
+            <p className="text-xs" style={{ color: 'var(--fn-text-muted)' }}>Vos transactions apparaîtront ici</p>
+          </div>
         ) : (
-          <div className="divide-y">
-            {transactions.map((tx) => (
-              <div key={tx.id} className="px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{txIcons[tx.type] || '💰'}</span>
-                  <div>
-                    <p className="text-sm font-medium">{tx.type}</p>
-                    <p className="text-xs text-gray-500">{new Date(tx.createdAt).toLocaleDateString('fr-FR')} {tx.description && `— ${tx.description}`}</p>
+          <div className="fn-stagger">
+            {transactions.map((tx) => {
+              const cfg = TX_CONFIG[tx.type] || { icon: '💰', label: tx.type, color: '#64748b' };
+              const isPositive = tx.amountCents >= 0;
+              return (
+                <div key={tx.id} className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-gray-50/80"
+                  style={{ borderBottom: '1px solid var(--fn-border-subtle)' }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+                    style={{ background: `${cfg.color}10` }}>
+                    {cfg.icon}
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold" style={{ color: 'var(--fn-text)' }}>{cfg.label}</p>
+                    <p className="text-[11px]" style={{ color: 'var(--fn-text-muted)' }}>
+                      {new Date(tx.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {tx.description && ` — ${tx.description}`}
+                    </p>
+                  </div>
+                  <span className="text-sm font-bold tabular-nums" style={{ color: isPositive ? '#059669' : '#dc2626' }}>
+                    {isPositive ? '+' : ''}{(tx.amountCents / 100).toFixed(2).replace('.', ',')} €
+                  </span>
                 </div>
-                <span className={`font-semibold ${tx.amountCents >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {tx.amountCents >= 0 ? '+' : ''}{(tx.amountCents / 100).toFixed(2)} €
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
