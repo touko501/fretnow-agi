@@ -65,7 +65,7 @@ router.post('/register', authLimiter, validate(schemas.registerSchema), async (r
   } catch (err) {
     if (err.message.includes('SIREN')) return res.status(409).json({ error: err.message });
     console.error('Register error:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ error: 'Erreur serveur', detail: err.message });
   }
 });
 

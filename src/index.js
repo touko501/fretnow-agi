@@ -142,7 +142,8 @@ if (fs.existsSync(spaFile)) {
 app.use((err, req, res, next) => {
   console.error('❌ Server error:', err);
   res.status(err.status || 500).json({
-    error: env.NODE_ENV === 'production' ? 'Erreur serveur interne' : err.message,
+    error: err.message || 'Erreur serveur interne',
+    ...(env.NODE_ENV !== 'production' && { stack: err.stack }),
   });
 });
 
