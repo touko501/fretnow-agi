@@ -50,7 +50,7 @@ if (fs.existsSync(publicDir)) {
 const publicRoutes = require('./routes/public');
 const authRoutes = require('./routes/auth');
 const missionRoutes = require('./routes/missions');
-const bidRoutes = require('./routes/bids');
+const bidRoutes = require('./routes/bids');h
 const documentRoutes = require('./routes/documents');
 const vehicleRoutes = require('./routes/vehicles');
 const driverRoutes = require('./routes/drivers');
@@ -67,6 +67,7 @@ const monitoringRoutes = require('./routes/monitoring');
 const gdprRoutes = require('./routes/gdpr');
 const mobilicRoutes = require('./routes/mobilic');
 const messagerieRoutes = require('./routes/messagerie');
+  const novaRoutes = require('./routes/nova');
 const autocompleteRoutes = require('./routes/autocomplete');
 const apiIntegrationRoutes = require('./routes/api-integrations');
 
@@ -92,6 +93,7 @@ app.use('/api/mobilic', mobilicRoutes);
 app.use('/api/messagerie', messagerieRoutes);
 app.use('/api/autocomplete', autocompleteRoutes);
 app.use('/api/v2', apiIntegrationRoutes);
+  app.use('/api/nova', novaRoutes);
 
 // ═══ API DOCS ═══
 app.get('/api', (req, res) => {
